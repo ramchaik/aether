@@ -1,0 +1,54 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontstage
+  labels:
+    app: frontstage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontstage
+  template:
+    metadata:
+      labels:
+        app: frontstage
+    spec:
+      containers:
+        - name: frontstage
+          image: vsramchaik/aether-frontstage:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 250m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontstage-service
+spec:
+  selector:
+    app: frontstage
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: LoadBalancer
