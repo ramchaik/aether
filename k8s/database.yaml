@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:latest
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: aether
+            - name: POSTGRES_USER
+              value: vaibhav
+            - name: POSTGRES_PASSWORD
+              value: vaibhav
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: NodePort
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prisma-scripts
+data:
+  run-migrations.sh: |
+    #!/bin/bash
+
+    # Wait for the PostgreSQL database to be ready
+    until nc -z -v -w30 postgres 5432
+    do
+      echo "Waiting for PostgreSQL database connection..."
+      sleep 5
+    done
+    echo "PostgreSQL database is up and running!"
+
+    # Run Prisma migrations
+    echo "Applying Prisma migrations..."
+
+    npx prisma migrate dev --name initial --schema=./prisma/schema.prisma --preview-feature
+
+    echo "Prisma migrations applied successfully."

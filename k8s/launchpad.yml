@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: launchpad-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: launchpad-app
+  template:
+    metadata:
+      labels:
+        app: launchpad-app
+    spec:
+      containers:
+        - name: launchpad-app-container
+          image: vsramchaik/aether-launchpad:latest
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              memory: 500Mi
+              cpu: 250m
+            limits:
+              memory: 1Gi
+              cpu: 500m
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://vaibhav:vaibhav@postgres:5432/aether"
+      initContainers:
+        - name: migrate
+          image: vsramchaik/aether-launchpad:latest
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://vaibhav:vaibhav@postgres:5432/aether"
+          command:
+            - "sh"
+            - "-c"
+            - |
+              apt-get update && apt-get install -y netcat-openbsd
+
+              cp /scripts/run-migrations.sh /app/
+              chmod +x /app/run-migrations.sh
+
+              cd /app && ./run-migrations.sh
+          volumeMounts:
+            - name: prisma-scripts
+              mountPath: /scripts
+      volumes:
+        - name: prisma-scripts
+          configMap:
+            name: prisma-scripts
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: launchpad-service
+spec:
+  selector:
+    app: launchpad-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000
+  type: NodePort
