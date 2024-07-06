@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontstage
+  name: frontstage-deployment
   labels:
     app: frontstage
 spec:

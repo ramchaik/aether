@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forge-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: forge
+  template:
+    metadata:
+      labels:
+        app: forge
+    spec:
+      containers:
+        - name: forge-container
+          image: vsramchaik/aether-forge:latest
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          env:
+            - name: DB_USERNAME
+              value: vaibhav
+            - name: DB_PASSWORD
+              value: vaibhav
+            - name: DB_HOST
+              value: postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_DATABASE
+              value: aether
+            - name: AWS_BUCKET_NAME
+              value: aether-projects
+            - name: AWS_REGION
+              value: us-east-1
+            - name: PORT
+              value: "8080"
+            - name: APP_ENV
+              value: local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: forge-service
+spec:
+  selector:
+    app: forge
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
