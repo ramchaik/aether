@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
@@ -31,8 +32,17 @@ func ProcessMessage(message *sqs.Message, workerType string) bool {
 
 // Run listens to an SQS queue and processes messages.
 func Run(queueURL string, workerType string) {
+	// Retrieve AWS credentials from environment variables
+	accessKeyID := os.Getenv("AWS_ACCESS_KEY_ID")
+	secretAccessKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
+
+	// Create a credentials object using the retrieved credentials
+	creds := credentials.NewStaticCredentials(accessKeyID, secretAccessKey, sessionToken)
+
 	sess := session.Must(session.NewSession(&aws.Config{
-		Region: aws.String(os.Getenv("AWS_REGION")),
+		Credentials: creds,
+		Region:      aws.String(os.Getenv("AWS_REGION")),
 	}))
 
 	sqsSvc := sqs.New(sess)
