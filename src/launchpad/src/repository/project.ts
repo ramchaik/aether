@@ -1,5 +1,8 @@
+import { db } from "../db";
 import slugify from "slugify";
-import prisma from "../lib/prisma";
+import { Project } from "../db/schema";
+import { eq } from "drizzle-orm";
+const { nanoid } = require("nanoid");
 
 async function generateUniqueSlug(baseName: string): Promise<string> {
   const maxAttempts = 10;
@@ -7,13 +10,13 @@ async function generateUniqueSlug(baseName: string): Promise<string> {
 
   async function generateSlug() {
     const baseSlug = slugify(baseName, { lower: true, strict: true });
-    const { nanoid } = await import("nanoid");
     const random = nanoid(6);
     const fullSlug = `${baseSlug}-${random}`;
 
-    const existingSlug = await prisma.project.findUnique({
-      where: { slug: fullSlug },
-    });
+    const existingSlug = await db
+      .select()
+      .from(Project)
+      .where(eq(Project.slug, fullSlug));
 
     if (existingSlug && attempts < maxAttempts) {
       ++attempts;
@@ -27,38 +30,56 @@ async function generateUniqueSlug(baseName: string): Promise<string> {
   return generateSlug();
 }
 
-/**
- * @param domain custom domain
- * @returns true if duplicate otherwise false
- */
 export async function checkDuplicateCustomDomain(
   domain: string
 ): Promise<boolean> {
-  const exitingCustomDomain = await prisma.project.findUnique({
-    where: { customDomain: domain },
-  });
+  const existingCustomDomain = await db
+    .select()
+    .from(Project)
+    .where(eq(Project.customDomain, domain));
 
-  return !!exitingCustomDomain;
+  return existingCustomDomain.length !== 0;
 }
 
 interface ICreateProject {
   name: string;
   customDomain?: string;
-  url: string;
+  repositoryUrl: string;
 }
 
-export async function create({ name, customDomain, url }: ICreateProject) {
+export async function createProject({
+  name,
+  customDomain,
+  repositoryUrl,
+}: ICreateProject) {
   const slug = await generateUniqueSlug(name);
 
   const domain = `${slug}.aether.app`;
 
-  return prisma.project.create({
-    data: {
-      name,
-      slug,
-      gitURL: url,
-      domain,
-      customDomain,
-    },
-  });
+  const projectData = {
+    name: name,
+    slug: slug,
+    repositoryUrl: repositoryUrl,
+    domain: domain,
+    customDomain: customDomain,
+  };
+
+  const queryRes = await db
+    .insert(Project)
+    .values(projectData)
+    .returning({ projectId: Project.id });
+  return queryRes[0];
+}
+
+export async function readProject(projectId: string) {
+  const project = await db
+    .select()
+    .from(Project)
+    .where(eq(Project.id, projectId));
+
+  if (project.length === 0) {
+    throw new Error("Project: 404");
+  }
+
+  return project[0];
 }

@@ -6,23 +6,33 @@
   "scripts": {
     "build": "esbuild src/index.ts --bundle --platform=node --outfile=dist/index.js",
     "start": "node dist/index.js",
-    "dev": "nodemon --watch 'src/**/*' -e ts --exec 'pnpm run build && pnpm run start'"
+    "dev": "tsx watch src",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/db/migrate.ts",
+    "studio": "drizzle-kit studio --verbose"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^5.16.0",
+    "@trpc/client": "^10.45.2",
+    "@trpc/server": "^10.45.2",
+    "dotenv": "^16.4.5",
     "fastify": "^4.28.0",
     "nanoid": "^5.0.7",
+    "pg": "^8.12.0",
+    "preset": "link:@trpc/client/preset",
     "slugify": "^1.6.6",
+    "trpc": "^0.11.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.14.9",
+    "@types/pg": "^8.11.6",
+    "drizzle-kit": "^0.23.0",
+    "drizzle-orm": "^0.32.0",
     "esbuild": "^0.21.5",
-    "nodemon": "^3.1.4",
-    "prisma": "^5.16.0",
+    "tsx": "^4.16.2",
     "typescript": "^5.5.2"
   }
 }

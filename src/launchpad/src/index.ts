@@ -1,6 +1,7 @@
+import "dotenv/config";
 import Fastify from "fastify";
 import registerRoutes from "./routes";
-import prisma from "./lib/prisma";
+import { pool } from "./db";
 
 const PORT = (process.env.PORT || 8000) as number;
 
@@ -15,7 +16,7 @@ app.get("/health", async (req, reply) => {
 });
 
 app.addHook("onClose", async () => {
-  await prisma.$disconnect();
+  await pool.end();
 });
 
 async function start() {
