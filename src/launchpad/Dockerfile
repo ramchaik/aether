@@ -4,14 +4,16 @@ ENV DATABASE_URL=${DATABASE_URL}
 
 WORKDIR /app
 
+RUN npm i -g pnpm
+
 COPY package*.json ./
-RUN npm install
+RUN pnpm install
 
-COPY prisma ./prisma/
-RUN npx prisma generate
-
+# Copy all source files
 COPY . .
-RUN npm run build
+
+# Build the application
+RUN pnpm run build
 
 EXPOSE 8000
-CMD [ "npm", "start" ]
+CMD [ "pnpm", "start" ]
