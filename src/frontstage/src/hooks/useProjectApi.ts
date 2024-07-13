@@ -14,8 +14,7 @@ const createProject = async (
   projectData: ProjectData,
   token: string | null
 ) => {
-  const apiHost = process.env.NEXT_PUBLIC_API_HOST || "http://localhost:8000";
-  const response = await fetch(`${apiHost}/api/v1/project`, {
+  const response = await fetch(`/api/project`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -32,8 +31,7 @@ const createProject = async (
 };
 
 const fetchAllProjects = async (token: string | null) => {
-  const apiHost = process.env.NEXT_PUBLIC_API_HOST || "http://localhost:8000";
-  const response = await fetch(`${apiHost}/api/v1/project`, {
+  const response = await fetch(`/api/project`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
