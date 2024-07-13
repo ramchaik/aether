@@ -1,7 +1,7 @@
 import { db } from "../db";
 import slugify from "slugify";
 import { Project } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 const { nanoid } = require("nanoid");
 
 async function generateUniqueSlug(baseName: string): Promise<string> {
@@ -43,14 +43,18 @@ export async function checkDuplicateCustomDomain(
 
 interface ICreateProject {
   name: string;
-  customDomain?: string;
+  userId: string;
   repositoryUrl: string;
+  customDomain?: string;
+  buildCommand?: string;
 }
 
 export async function createProject({
   name,
-  customDomain,
+  userId,
   repositoryUrl,
+  customDomain,
+  buildCommand,
 }: ICreateProject) {
   const slug = await generateUniqueSlug(name);
 
@@ -62,6 +66,8 @@ export async function createProject({
     repositoryUrl: repositoryUrl,
     domain: domain,
     customDomain: customDomain,
+    buildCommand: buildCommand,
+    userId: userId,
   };
 
   const queryRes = await db
@@ -71,15 +77,23 @@ export async function createProject({
   return queryRes[0];
 }
 
-export async function readProject(projectId: string) {
+export async function readProject(userId: string, projectId: string) {
   const project = await db
     .select()
     .from(Project)
-    .where(eq(Project.id, projectId));
+    .where(and(eq(Project.userId, userId), eq(Project.id, projectId)));
 
   if (project.length === 0) {
     throw new Error("Project: 404");
   }
 
   return project[0];
+}
+
+export async function readAllProjects(userId: string) {
+  const projects = await db
+    .select()
+    .from(Project)
+    .where(eq(Project.userId, userId));
+  return projects;
 }

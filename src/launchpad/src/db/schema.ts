@@ -14,8 +14,10 @@ export const Project = pgTable("projects", {
   customDomain: varchar("custom_domain")
     .unique()
     .default(sql`null`),
+  buildCommand: varchar("build_command").default("npm run build"),
   createdAt: timestamp("created_at").default(sql`now()`),
   updatedAt: timestamp("updated_at")
     .default(sql`now()`)
     .$onUpdateFn(() => sql`now()`),
+  userId: varchar("clerk_user_id"),
 });

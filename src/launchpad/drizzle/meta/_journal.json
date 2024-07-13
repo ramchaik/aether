@@ -8,6 +8,20 @@
       "when": 1720794512514,
       "tag": "0000_whole_corsair",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1720798112207,
+      "tag": "0001_eminent_lifeguard",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1720831072403,
+      "tag": "0002_flaky_lilith",
+      "breakpoints": true
     }
   ]
 }
