@@ -1,14 +1,13 @@
 import { UserButton } from "@clerk/nextjs";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import Link from "next/link";
-import React from "react";
 import {
+  Button,
   Navbar,
   NavbarBrand,
   NavbarContent,
   NavbarItem,
-  Button,
 } from "@nextui-org/react";
+import Link from "next/link";
 import AetherLogo from "./aether-logo";
 
 export default async function Header() {
@@ -18,7 +17,7 @@ export default async function Header() {
   return (
     <Navbar isBordered maxWidth="xl">
       <NavbarBrand>
-        <Link href="/" className="font-bold text-inherit">
+        <Link href="/" className="font-semibold text-inherit">
           <div className="flex">
             <AetherLogo height={50} width={50} />
             <span className="mt-3">Aether</span>

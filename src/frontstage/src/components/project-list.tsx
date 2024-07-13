@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
   Button,
@@ -12,44 +12,27 @@ import {
   ModalBody,
 } from "@nextui-org/react";
 import dynamic from "next/dynamic";
-import { motion } from "framer-motion";
 import ProjectForm from "./project-form";
 import Link from "next/link";
+import { useFetchAllProjects } from "@/hooks/useProjectApi";
+import useProjectStore, { Project } from "@/store/useProjectStore";
 
 const MotionDiv = dynamic(
   () => import("framer-motion").then((mod) => mod.motion.div),
   { ssr: false }
 );
 
-interface Project {
-  id: number;
-  name: string;
-  githubUrl: string;
-}
-
-interface ProjectListProps {
-  projects?: Project[];
-}
-
-const ProjectList: React.FC<ProjectListProps> = ({ projects = [] }) => {
+const ProjectList: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { data: projects } = useFetchAllProjects<Project[]>();
+  const { setProjects } = useProjectStore();
+  useEffect(() => {
+    if (projects) {
+      setProjects(projects);
+    }
+  }, [projects, setProjects]);
 
-  // Dummy data for projects if none provided
-  const dummyProjects: Project[] = [
-    {
-      id: 1,
-      name: "Project Alpha",
-      githubUrl: "https://github.com/user/project-alpha",
-    },
-    { id: 2, name: "Beta App", githubUrl: "https://github.com/user/beta-app" },
-    {
-      id: 3,
-      name: "Gamma Service",
-      githubUrl: "https://github.com/user/gamma-service",
-    },
-  ];
-
-  const displayProjects = projects.length > 0 ? projects : dummyProjects;
+  const displayProjects = useProjectStore((state) => state.projects);
 
   return (
     <div className="container mx-auto p-4">
@@ -70,7 +53,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ projects = [] }) => {
               <CardHeader className="flex flex-col items-start">
                 <h4 className="text-large font-bold">{project.name}</h4>
                 <p className="text-small text-default-500">
-                  {project.githubUrl}
+                  {project.repositoryUrl}
                 </p>
               </CardHeader>
               <CardBody>

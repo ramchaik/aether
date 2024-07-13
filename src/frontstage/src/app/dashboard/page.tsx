@@ -1,8 +1,6 @@
 import ProjectList from "@/components/project-list";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import React from "react";
-import { Card, CardBody, CardHeader, Avatar, Divider } from "@nextui-org/react";
-import ProjectForm from "@/components/project-form";
+import { Avatar, Card, CardBody, CardHeader, Divider } from "@nextui-org/react";
 
 export default async function DashboardPage() {
   const { userId } = auth();

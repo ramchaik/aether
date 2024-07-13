@@ -5,6 +5,8 @@
 import React, { useState } from "react";
 import { Input, Button, Textarea, Tooltip } from "@nextui-org/react";
 import { motion } from "framer-motion";
+import { useCreateProject } from "@/hooks/useProjectApi";
+import toast from "react-hot-toast";
 
 interface ProjectFormProps {
   onClose: () => void;
@@ -17,6 +19,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
     customDomain: "",
     buildCommand: "",
   });
+  const createProjectMutation = useCreateProject();
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -30,10 +33,40 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submitted:", formData);
-    // Here you would typically send the data to your backend
-    onClose(); // Close the modal after submission
+    const loadingToast = toast.loading("Submitting project...");
+    createProjectMutation.mutate(
+      {
+        name: formData.projectName,
+        repositoryUrl: formData.repoUrl,
+        customDomain: formData.customDomain,
+        buildCommand: formData.buildCommand,
+      },
+      {
+        onSuccess: (res) => {
+          toast.dismiss(loadingToast);
+          toast.success("Project created successfully!");
+          console.log("Project created successfully");
+          console.log(res);
+          onClose();
+        },
+        onError: (error) => {
+          toast.dismiss(loadingToast);
+          toast.error("Failed to create project. Please try again.");
+          console.error("Error creating project:", error);
+        },
+      }
+    );
   };
+
+  if (createProjectMutation.isLoading) return <div>Submitting...</div>;
+
+  if (createProjectMutation.isError) {
+    return (
+      <div>
+        An error occurred: {(createProjectMutation.error as Error).message}
+      </div>
+    );
+  }
 
   return (
     <motion.div
