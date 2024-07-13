@@ -18,8 +18,12 @@ spec:
       containers:
         - name: frontstage
           image: vsramchaik/aether-frontstage:latest
+          # imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
+          env:
+            - name: BACKEND_API_HOST
+              value: "http://launchpad-service"
           resources:
             limits:
               cpu: 500m

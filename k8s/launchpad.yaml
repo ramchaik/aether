@@ -15,6 +15,7 @@ spec:
       containers:
         - name: launchpad-app-container
           image: vsramchaik/aether-launchpad:latest
+          # imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
           resources:
@@ -44,12 +45,12 @@ spec:
 
               cd /app && ./run-migrations.sh
           volumeMounts:
-            - name: prisma-scripts
+            - name: drizzle-scripts
               mountPath: /scripts
       volumes:
-        - name: prisma-scripts
+        - name: drizzle-scripts
           configMap:
-            name: prisma-scripts
+            name: drizzle-scripts
 ---
 apiVersion: v1
 kind: Service
@@ -62,4 +63,4 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8000
-  type: NodePort
+  type: ClusterIP

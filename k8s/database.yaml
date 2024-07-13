@@ -45,7 +45,7 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: prisma-scripts
+  name: drizzle-scripts
 data:
   run-migrations.sh: |
     #!/bin/bash
@@ -58,9 +58,10 @@ data:
     done
     echo "PostgreSQL database is up and running!"
 
-    # Run Prisma migrations
-    echo "Applying Prisma migrations..."
+    # Run Drizzle migrations
+    echo "Applying Drizzle migrations..."
 
-    npx prisma migrate dev --name initial --schema=./prisma/schema.prisma --preview-feature
+    pnpm add tsx
+    pnpm run migrate
 
-    echo "Prisma migrations applied successfully."
+    echo "Drizzle migrations applied successfully."
