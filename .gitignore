@@ -128,3 +128,10 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+
+# Ignore DevSpace cache and log folder
+.devspace/
+
+
+**/.terraform/**
