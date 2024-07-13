@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 
 const backendApiHost = process.env.BACKEND_API_HOST || "http://localhost:8000";
 
-console.log({ ENV_HOST: process.env.BACKEND_API_HOST });
 console.log({ backendApiHost });
 
 export async function GET(req: Request) {

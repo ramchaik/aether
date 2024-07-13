@@ -40,7 +40,7 @@ app.addHook("onClose", async () => {
 async function start() {
   try {
     await app.listen({
-      host: "127.0.0.1", //"0.0.0.0",
+      host: "0.0.0.0",
       port: PORT,
     });
   } catch (error) {
