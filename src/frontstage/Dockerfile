@@ -1,43 +1,36 @@
-# Stage 1: Build the application
-FROM node:20-alpine AS builder
+FROM node:20-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
 
-# Create and change to the app directory
+FROM base AS builder
 WORKDIR /app
-
-# Install pnpm
-RUN npm install -g pnpm
-
-# Copy package.json and pnpm-lock.yaml
-COPY package.json pnpm-lock.yaml ./
-
-# Install dependencies
-RUN pnpm install
-
-# Copy all files
+COPY package.json pnpm-lock.yaml .npmrc ./
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 COPY . .
-
-# Build the application
 RUN pnpm run build
 
-# Stage 2: Run the application
-FROM node:20-alpine
-
-# Create and change to the app directory
+# Production image, copy all the files and run next
+FROM base AS runner
 WORKDIR /app
 
-# Install pnpm
-RUN npm install -g pnpm
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Copy only necessary files from the builder stage
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/next.config.mjs ./
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./
-
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY .env.local ./
 
-# Expose the port
+USER nextjs
+
 EXPOSE 3000
 
-# Start the application
-CMD ["pnpm", "start"]
+ENV PORT 3000
+
+CMD ["node", "server.js"]
