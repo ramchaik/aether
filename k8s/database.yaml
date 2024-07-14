@@ -26,8 +26,8 @@ spec:
               value: vaibhav
           resources:
             limits:
-              cpu: 500m
-              memory: 1Gi
+              cpu: 250m
+              memory: 500Mi
 ---
 apiVersion: v1
 kind: Service
