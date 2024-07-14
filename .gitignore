@@ -133,5 +133,73 @@ dist
 # Ignore DevSpace cache and log folder
 .devspace/
 
+# Terraform files
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/.terraform/
+**/.terraform.lock.hcl
 
-**/.terraform/**
+# .tfvars files may contain sensitive data
+**/*.tfvars
+**/*.tfvars.json
+
+# Crash log files
+**/crash.log
+**/crash.*.log
+
+# Exclude all .tfvars files, which are likely to contain sensitive data
+**/*.tfvars
+**/*.tfvars.json
+
+# Ignore override files as they are usually used to override resources locally and so
+# are not checked in
+**/override.tf
+**/override.tf.json
+**/*_override.tf
+**/*_override.tf.json
+
+# Ignore CLI configuration files
+**/.terraformrc
+**/terraform.rc
+
+# Ignore .terraform.lock.hcl files (these should be committed for production, but often ignored for development)
+**/.terraform.lock.hcl
+
+# Local .terraform directories
+**/.terraform/*
+
+# Ignore any .tfplan files
+**/*.tfplan
+
+# Ignore any .tfout files
+**/*.tfout
+
+# Ignore provider plugin binaries
+**/terraform-provider-*
+
+# Ignore .DS_Store files (macOS)
+.DS_Store
+
+# Ignore .vscode settings
+.vscode/
+
+# Ignore any log files
+*.log
+
+# Ignore any temporary files
+*.tmp
+
+# Ignore any backup files
+*.bak
+
+# Ignore node_modules directory (if your monorepo includes JavaScript/Node.js projects)
+**/node_modules/
+
+# Ignore any environment-specific files
+**/.env
+**/.env.*
+
+# Ignore any IDE-specific files (add more as needed)
+.idea/
+*.swp
+*.swo
