@@ -10,7 +10,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <NextUIProvider>
-        <ClerkProvider>{children}</ClerkProvider>
+        <ClerkProvider afterSignOutUrl="/">{children}</ClerkProvider>
       </NextUIProvider>
     </QueryClientProvider>
   );

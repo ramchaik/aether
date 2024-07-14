@@ -33,7 +33,7 @@ export default async function Header() {
               </Link>
             </NavbarItem>
             <NavbarItem>
-              <UserButton afterSignOutUrl="/" />
+              <UserButton />
             </NavbarItem>
           </>
         ) : (
