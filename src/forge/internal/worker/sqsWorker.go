@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"forge/internal/utils"
 	"log"
@@ -9,8 +11,28 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs"
 )
 
+type Message struct {
+	RepoURL      string `json:"repoURL"`
+	BuildCommand string `json:"buildCommand"`
+}
+
 // ProcessMessage takes a message and performs the necessary actions based on the message content.
 func ProcessMessage(message *sqs.Message, workerType string) bool {
+	if message == nil {
+		log.Println("Received nil message")
+		return false
+	}
+
+	if message.Body == nil {
+		log.Println("Message body is nil")
+		return false
+	}
+
+	if message.MessageAttributes == nil {
+		log.Println("Message attributes is nil")
+		return false
+	}
+
 	messageBody := *message.Body
 	messageType := *message.MessageAttributes["MessageType"].StringValue
 
@@ -21,8 +43,19 @@ func ProcessMessage(message *sqs.Message, workerType string) bool {
 		return false
 	}
 
-	// Process the message here
-	fmt.Print("Processing message\n")
+	var msg Message
+	err := json.Unmarshal([]byte(messageBody), &msg)
+	if err != nil {
+		log.Printf("Error unmarshaling message body: %v\n", err)
+		return false
+	}
+
+	repoURL := msg.RepoURL
+	buildCommand := msg.BuildCommand
+
+	ctx := context.Background()
+
+	utils.BuildProject(ctx, repoURL, buildCommand)
 
 	// Return true if the message should be deleted, false otherwise
 	return true
@@ -32,7 +65,7 @@ func ProcessMessage(message *sqs.Message, workerType string) bool {
 func Run(queueURL string, workerType string) {
 	sqsSvc := utils.GetSQSService()
 
-	fmt.Printf("Listening to SQS: %v\n\n", queueURL)
+	fmt.Printf("[Type: %s] Listening to SQS: %v\n\n", workerType, queueURL)
 
 	for {
 		result, err := sqsSvc.ReceiveMessage(&sqs.ReceiveMessageInput{
@@ -47,7 +80,13 @@ func Run(queueURL string, workerType string) {
 		}
 
 		for _, message := range result.Messages {
-			if !ProcessMessage(message, workerType) {
+			messageStatus := ProcessMessage(message, workerType)
+			if !messageStatus {
+				log.Printf("Failed to process message [message id: %s]\n", *message.MessageId)
+
+				// ! Testing: Invert this on PROD
+				// Allowing delete for the invalid case to avoid clog
+
 				break
 			}
 
