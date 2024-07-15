@@ -1,33 +1,67 @@
 package utils
 
 import (
+	"context"
+	"fmt"
 	"os"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 )
 
-func getSession() *session.Session {
+// getConfig retrieves AWS credentials and region from environment variables and returns a session.
+func getConfig() (*aws.Config, error) {
 	// Retrieve AWS credentials from environment variables
 	accessKeyID := os.Getenv("AWS_ACCESS_KEY_ID")
 	secretAccessKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
 	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
 
 	// Create a credentials object using the retrieved credentials
-	creds := credentials.NewStaticCredentials(accessKeyID, secretAccessKey, sessionToken)
+	creds := credentials.NewStaticCredentialsProvider(
+		accessKeyID,
+		secretAccessKey,
+		sessionToken,
+	)
 
-	sess := session.Must(session.NewSession(&aws.Config{
-		Credentials: creds,
-		Region:      aws.String(os.Getenv("AWS_REGION")),
-	}))
+	region := os.Getenv("AWS_REGION")
 
-	return sess
+	// Load the Shared AWS Config
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithCredentialsProvider(creds),
+		config.WithRegion(region),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load SDK config, %w", err)
+	}
+
+	return &cfg, nil
 }
 
-func GetSQSService() *sqs.SQS {
-	sess := getSession()
-	sqsSvc := sqs.New(sess)
-	return sqsSvc
+// GetSQSService create and returns SQS client
+func GetSQSService() (*sqs.Client, error) {
+	cfg, err := getConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create SQS service client
+	sqsClient := sqs.NewFromConfig(*cfg)
+
+	return sqsClient, nil
+}
+
+// GetS3Service creates and returns an S3 client.
+func GetS3Service() (*s3.Client, error) {
+	cfg, err := getConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create S3 service client
+	s3Client := s3.NewFromConfig(*cfg)
+
+	return s3Client, nil
 }

@@ -106,53 +106,52 @@ func pruneDockerImages(ctx context.Context, cli *client.Client) error {
 	return nil
 }
 
-// BuildProject refactored version.
-func BuildProject(ctx context.Context, repoURL, buildCommand string) {
+// BuildProject builds a project and returns the Docker client, build directory, and image name.
+func BuildProject(ctx context.Context, repoURL, buildCommand string) (*client.Client, string, string, error) {
 	uuid := uuid.New().String()
 	imageName := "aether-build-" + uuid
 
 	currentDir, err := os.Getwd()
 	if err != nil {
-		log.Printf("Failed to get current directory: %v\n", err)
-		return
+		return nil, "", "", fmt.Errorf("failed to get current directory: %w", err)
 	}
 
 	buildDir := filepath.Join(currentDir, "build-output")
 	if err := os.MkdirAll(buildDir, 0755); err != nil {
-		log.Printf("Failed to create build directory: %v\n", err)
-		return
+		return nil, "", "", fmt.Errorf("failed to create build directory: %w", err)
 	}
 
 	dockerfilePath := filepath.Join(currentDir, "internal", "utils", "secure-build.dockerfile")
 
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		log.Printf("Failed to create Docker client: %v\n", err)
-		return
+		return nil, "", "", fmt.Errorf("failed to create Docker client: %w", err)
 	}
 
 	_, err = buildImage(ctx, cli, dockerfilePath, repoURL, buildCommand, imageName)
 	if err != nil {
-		log.Printf("Failed during image build: %v\n", err)
-		return
+		return nil, "", "", fmt.Errorf("failed during image build: %w", err)
 	}
 
 	if err := copyBuildOutput(ctx, cli, imageName, currentDir); err != nil {
-		log.Printf("Failed to copy build output: %v\n", err)
-		return
+		return nil, "", "", fmt.Errorf("failed to copy build output: %w", err)
 	}
 
-	defer func() {
-		// Attempt to remove the build directory regardless of build success
-		if err := removeBuildDirectory(buildDir); err != nil {
-			log.Printf("Failed to remove build directory: %v\n", err)
-		}
+	return cli, buildDir, imageName, nil
+}
 
-		// Prune Docker images using the Docker client instance
-		if err := pruneDockerImages(ctx, cli); err != nil {
-			log.Printf("Failed to prune Docker images: %v\n", err)
-		}
-	}()
+// Cleanup performs cleanup actions after a build project.
+func Cleanup(ctx context.Context, cli *client.Client, buildDir string, imageName string) error {
+	// Remove the build directory
+	if err := removeBuildDirectory(buildDir); err != nil {
+		return fmt.Errorf("failed to remove build directory: %w", err)
+	}
 
-	fmt.Println("Build output copied to build-output directory")
+	// Prune Docker images
+	if err := pruneDockerImages(ctx, cli); err != nil {
+		return fmt.Errorf("failed to prune Docker images: %w", err)
+	}
+
+	fmt.Println("Cleanup completed successfully")
+	return nil
 }

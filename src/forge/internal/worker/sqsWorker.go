@@ -6,38 +6,28 @@ import (
 	"fmt"
 	"forge/internal/utils"
 	"log"
+	"os"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	"github.com/google/uuid"
 )
 
 type Message struct {
+	// ProjectId    string `json:"projectId"`
 	RepoURL      string `json:"repoURL"`
 	BuildCommand string `json:"buildCommand"`
 }
 
 // ProcessMessage takes a message and performs the necessary actions based on the message content.
-func ProcessMessage(message *sqs.Message, workerType string) bool {
-	if message == nil {
-		log.Println("Received nil message")
-		return false
-	}
-
-	if message.Body == nil {
-		log.Println("Message body is nil")
-		return false
-	}
-
-	if message.MessageAttributes == nil {
-		log.Println("Message attributes is nil")
+func ProcessMessage(message types.Message, workerType string) bool {
+	if message.Body == nil || message.MessageAttributes == nil {
+		log.Println("Invalid message received")
 		return false
 	}
 
 	messageBody := *message.Body
 	messageType := *message.MessageAttributes["MessageType"].StringValue
-
-	fmt.Println("Body:", messageBody)
-	fmt.Printf("Attributes: %v", messageType)
 
 	if messageType != workerType {
 		return false
@@ -55,25 +45,45 @@ func ProcessMessage(message *sqs.Message, workerType string) bool {
 
 	ctx := context.Background()
 
-	utils.BuildProject(ctx, repoURL, buildCommand)
+	cli, buildDir, imageName, err := utils.BuildProject(ctx, repoURL, buildCommand)
+	if err != nil {
+		log.Fatalf("Failed to build project: %v", err)
+	}
 
-	// Return true if the message should be deleted, false otherwise
+	bucketName := os.Getenv("AWS_BUCKET_NAME")
+	// TODO: use the projectID for instead of uuid
+	prefix := fmt.Sprintf("projects/%s/build/", uuid.New().String())
+
+	s3Client, err := utils.GetS3Service()
+	if err != nil {
+		log.Fatalf("Failed to create S3 client: %v", err)
+	}
+
+	if err := utils.UploadToS3(ctx, buildDir, bucketName, prefix, s3Client); err != nil {
+		log.Fatalf("Failed to upload files to S3: %v", err)
+	}
+
+	utils.Cleanup(ctx, cli, buildDir, imageName)
+
 	return true
 }
 
 // Run listens to an SQS queue and processes messages.
 func Run(queueURL string, workerType string) {
-	sqsSvc := utils.GetSQSService()
+	sqsSvc, err := utils.GetSQSService()
+	if err != nil {
+		log.Fatalf("Failed to get SQS service %v", err)
+	}
 
 	fmt.Printf("[Type: %s] Listening to SQS: %v\n\n", workerType, queueURL)
 
 	for {
-		result, err := sqsSvc.ReceiveMessage(&sqs.ReceiveMessageInput{
+		result, err := sqsSvc.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
 			QueueUrl:              &queueURL,
-			MaxNumberOfMessages:   aws.Int64(10),
-			VisibilityTimeout:     aws.Int64(20),
-			WaitTimeSeconds:       aws.Int64(0),
-			MessageAttributeNames: []*string{aws.String("All")},
+			MaxNumberOfMessages:   10,
+			VisibilityTimeout:     20,
+			WaitTimeSeconds:       0,
+			MessageAttributeNames: []string{"All"},
 		})
 		if err != nil {
 			log.Fatalf("ReceiveMessage failed %v", err)
@@ -83,15 +93,11 @@ func Run(queueURL string, workerType string) {
 			messageStatus := ProcessMessage(message, workerType)
 			if !messageStatus {
 				log.Printf("Failed to process message [message id: %s]\n", *message.MessageId)
-
-				// ! Testing: Invert this on PROD
-				// Allowing delete for the invalid case to avoid clog
-
 				break
 			}
 
 			// Delete the message from the queue after processing
-			_, err = sqsSvc.DeleteMessage(&sqs.DeleteMessageInput{
+			_, err = sqsSvc.DeleteMessage(context.TODO(), &sqs.DeleteMessageInput{
 				QueueUrl:      &queueURL,
 				ReceiptHandle: message.ReceiptHandle,
 			})
