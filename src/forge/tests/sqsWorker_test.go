@@ -1,37 +1,55 @@
-package tests
+package worker
 
 import (
 	"forge/internal/worker"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/stretchr/testify/assert"
 )
 
-// Define the MockSQSService struct
 type MockSQSService struct {
-	messages []sqs.Message
+	message types.Message
 }
 
 func TestProcessMessage(t *testing.T) {
-	mockService := &MockSQSService{
-		messages: []sqs.Message{
-			{
-				Body: aws.String("Test Message"),
-				MessageAttributes: map[string]*sqs.MessageAttributeValue{
-					"MessageType": {
-						DataType:    aws.String("String"),
-						StringValue: aws.String("Build"),
-					},
-				},
+	// Mock SQS message
+	mockMessage := types.Message{
+		Body: aws.String(`{"repoURL": "https://github.com/example/repo", "buildCommand": "go build"}`),
+		MessageAttributes: map[string]types.MessageAttributeValue{
+			"MessageType": {
+				DataType:    aws.String("String"),
+				StringValue: aws.String("Build"),
 			},
 		},
 	}
 
-	isProcessed := worker.ProcessMessage(&mockService.messages[0], "Build")
+	isProcessed := worker.ProcessMessage(mockMessage, "Build")
 	assert.True(t, isProcessed, "Expected message to be processed")
 
-	isProcessed = worker.ProcessMessage(&mockService.messages[0], "invalid-type")
-	assert.False(t, isProcessed, "Expected message to be processed")
+	isProcessed = worker.ProcessMessage(mockMessage, "invalid-type")
+	assert.False(t, isProcessed, "Expected message to be rejected due to invalid type")
+
+	// Test invalid JSON message body
+	invalidMessage := types.Message{
+		Body: aws.String("Invalid JSON"),
+		MessageAttributes: map[string]types.MessageAttributeValue{
+			"MessageType": {
+				DataType:    aws.String("String"),
+				StringValue: aws.String("Build"),
+			},
+		},
+	}
+
+	isProcessed = worker.ProcessMessage(invalidMessage, "Build")
+	assert.False(t, isProcessed, "Expected message with invalid JSON to be rejected")
+
+	// Test missing message attributes
+	missingAttributes := types.Message{
+		Body: aws.String(`{"repoURL": "https://github.com/example/repo", "buildCommand": "go build"}`),
+	}
+
+	isProcessed = worker.ProcessMessage(missingAttributes, "Build")
+	assert.False(t, isProcessed, "Expected message with missing attributes to be rejected")
 }

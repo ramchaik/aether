@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: forge-deployment
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: forge
@@ -12,9 +12,12 @@ spec:
       labels:
         app: forge
     spec:
+      hostPID: true
       containers:
         - name: forge-container
           image: vsramchaik/aether-forge:latest
+          securityContext:
+            privileged: true
           ports:
             - containerPort: 8080
           resources:
@@ -25,24 +28,21 @@ spec:
               cpu: "500m"
               memory: "1Gi"
           env:
-            - name: DB_USERNAME
-              value: vaibhav
-            - name: DB_PASSWORD
-              value: vaibhav
-            - name: DB_HOST
-              value: postgres
-            - name: DB_PORT
-              value: "5432"
-            - name: DB_DATABASE
-              value: aether
+            - name: WORKER_TYPE
+              value: Build
             - name: AWS_BUCKET_NAME
-              value: aether-projects
+              value: aether-bucket
             - name: AWS_REGION
               value: us-east-1
-            - name: PORT
-              value: "8080"
-            - name: APP_ENV
-              value: local
+            - name: AWS_SQS_URL
+              value: https://sqs.us-east-1.amazonaws.com/502413910473/aether-queue
+            # - name: AWS_ACCESS_KEY_ID
+            #   value: ""
+            # - name: AWS_SECRET_ACCESS_KEY
+            #   value: ""
+            # - name: AWS_SESSION_TOKEN
+            #   value: ""
+
 ---
 apiVersion: v1
 kind: Service

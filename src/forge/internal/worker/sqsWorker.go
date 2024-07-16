@@ -75,7 +75,7 @@ func Run(queueURL string, workerType string) {
 		log.Fatalf("Failed to get SQS service %v", err)
 	}
 
-	fmt.Printf("[Type: %s] Listening to SQS: %v\n\n", workerType, queueURL)
+	fmt.Printf("[Type: %s] Listening to SQS: %v\n", workerType, queueURL)
 
 	for {
 		result, err := sqsSvc.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{

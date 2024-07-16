@@ -3,26 +3,49 @@ FROM golang:latest AS builder
 WORKDIR /app
 
 COPY go.mod go.sum ./
-
-# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
 RUN go mod download
 
 COPY . .
-
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker ./cmd/worker
 
-# Start a new stage from scratch
-FROM alpine:latest  
+# Start a new stage from docker:dind
+FROM docker:dind
 
-ENV PATH="/bin:${PATH}"
-
-# Install ca-certificates for HTTPS requests
-RUN apk add --no-cache ca-certificates
+# Create a directory for the application
+WORKDIR /app
 
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/worker .
+COPY --from=builder /app/secure-build.dockerfile .
+COPY .env .
+
+ENV DOCKER_HOST=unix:///var/run/docker.sock
 
 # Expose port 8080 to the outside world
 EXPOSE 8080
 
-CMD ["./worker"]
+# Create a startup script
+COPY <<EOF /start.sh
+#!/bin/sh
+
+# Start dockerd with cgroup v1
+dockerd --exec-opt native.cgroupdriver=cgroupfs &
+
+# Wait for Docker to become available
+timeout=60
+while ! docker info >/dev/null 2>&1; do
+    timeout=$((timeout - 1))
+    if [ $timeout -le 0 ]; then
+        echo "Timed out waiting for Docker to start"
+        exit 1
+    fi
+    sleep 1
+done
+
+echo "Docker is available, starting worker..."
+exec ./worker
+EOF
+
+RUN chmod +x /start.sh
+
+ENTRYPOINT ["/start.sh"]

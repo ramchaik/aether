@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -49,13 +50,6 @@ func buildImage(ctx context.Context, cli *client.Client, dockerfilePath, repoURL
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build the image: %w", err)
-	}
-
-	// Read the response from the image build and log it
-	log.Println("Reading image build response...")
-	if _, err := io.Copy(os.Stdout, imageBuildResponse.Body); err != nil {
-		log.Printf("Failed to read image build response: %v\n", err)
-		return nil, err // Consider whether you want to return here or continue execution
 	}
 
 	return imageBuildResponse.Body, nil
@@ -106,6 +100,32 @@ func pruneDockerImages(ctx context.Context, cli *client.Client) error {
 	return nil
 }
 
+func createDockerClient() (*client.Client, error) {
+	dockerHost := os.Getenv("DOCKER_HOST")
+	if dockerHost == "" {
+		dockerHost = "unix:///var/run/docker.sock" // Default value
+	}
+
+	var cli *client.Client
+	var err error
+	for attempts := 0; attempts < 30; attempts++ {
+		cli, err = client.NewClientWithOpts(
+			client.WithHost(dockerHost),
+			client.WithAPIVersionNegotiation(),
+		)
+		if err == nil {
+			// Test the connection
+			_, err = cli.Ping(context.Background())
+			if err == nil {
+				return cli, nil
+			}
+		}
+		log.Printf("Failed to connect to Docker (attempt %d): %v", attempts+1, err)
+		time.Sleep(2 * time.Second)
+	}
+	return nil, fmt.Errorf("failed to connect to Docker after multiple attempts: %w", err)
+}
+
 // BuildProject builds a project and returns the Docker client, build directory, and image name.
 func BuildProject(ctx context.Context, repoURL, buildCommand string) (*client.Client, string, string, error) {
 	uuid := uuid.New().String()
@@ -121,16 +141,33 @@ func BuildProject(ctx context.Context, repoURL, buildCommand string) (*client.Cl
 		return nil, "", "", fmt.Errorf("failed to create build directory: %w", err)
 	}
 
-	dockerfilePath := filepath.Join(currentDir, "internal", "utils", "secure-build.dockerfile")
+	dockerfilePath := filepath.Join(currentDir, "secure-build.dockerfile")
 
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	cli, err := createDockerClient()
 	if err != nil {
 		return nil, "", "", fmt.Errorf("failed to create Docker client: %w", err)
 	}
 
-	_, err = buildImage(ctx, cli, dockerfilePath, repoURL, buildCommand, imageName)
+	buildResponse, err := buildImage(ctx, cli, dockerfilePath, repoURL, buildCommand, imageName)
 	if err != nil {
 		return nil, "", "", fmt.Errorf("failed during image build: %w", err)
+	}
+	defer buildResponse.Close()
+
+	// Print build output
+	output, err := io.ReadAll(buildResponse)
+	if err != nil {
+		return nil, "", "", fmt.Errorf("failed to read build output: %w", err)
+	}
+	fmt.Println("Build output:", string(output))
+
+	// Check if the image exists
+	_, _, err = cli.ImageInspectWithRaw(ctx, imageName)
+	if err != nil {
+		if client.IsErrNotFound(err) {
+			return nil, "", "", fmt.Errorf("built image not found: %s", imageName)
+		}
+		return nil, "", "", fmt.Errorf("failed to inspect image: %w", err)
 	}
 
 	if err := copyBuildOutput(ctx, cli, imageName, currentDir); err != nil {
