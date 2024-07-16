@@ -1,10 +1,13 @@
-.PHONY: build clean deploy
+.PHONY: build clean deploy remove
 
 build:
-	env GOOS=linux go build -ldflags="-s -w" -o bin/proxy proxy/main.go
+	env GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bootstrap proxy/main.go
 
 clean:
-	rm -rf ./bin
+	rm -rf ./bootstrap
 
 deploy: clean build
 	sls deploy --verbose
+
+remove:
+	sls remove --verbose

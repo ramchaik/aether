@@ -10,7 +10,6 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "serverless": "^4.1.12",
-    "serverless-api-cloudfront": "^0.9.5"
+    "serverless": "^4.1.12"
   }
 }

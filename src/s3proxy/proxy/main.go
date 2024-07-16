@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
-	"os"
 	"path"
 	"strings"
 
@@ -21,6 +19,7 @@ const (
 	bucketName = "aether-bucket"
 	buildDir   = "build"
 	defaultKey = "index.html"
+	bucketURL  = "https://aether-bucket.s3.amazonaws.com"
 )
 
 var s3Client *s3.Client
@@ -34,18 +33,21 @@ func init() {
 }
 
 func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	host := request.Headers["Host"]
-	baseDomain := os.Getenv("BASE_DOMAIN")
-	subdomain := strings.TrimSuffix(host, "."+baseDomain)
+	// Extract projectId from the path parameters
+	projectId := request.PathParameters["projectId"]
+	if projectId == "" {
+		return events.APIGatewayProxyResponse{
+			StatusCode: 400,
+			Body:       "Project ID is required",
+		}, nil
+	}
 
-	// Use the subdomain as the prefix
-	prefix := subdomain
-
-	key := path.Join(prefix, buildDir)
-	if request.Path == "/" || request.Path == "" {
+	// Construct the key using the projectId
+	key := path.Join("projects", projectId, buildDir)
+	if request.Path == "/"+projectId || request.Path == "/"+projectId+"/" {
 		key = path.Join(key, defaultKey)
 	} else {
-		key = path.Join(key, strings.TrimPrefix(request.Path, "/"))
+		key = path.Join(key, strings.TrimPrefix(request.Path, "/"+projectId+"/"))
 	}
 
 	// Check if the object exists in S3
@@ -54,7 +56,6 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		// If the error is NoSuchKey, return 404
 		var nske *types.NoSuchKey
 		if strings.Contains(err.Error(), "NotFound") || errors.As(err, &nske) {
 			return events.APIGatewayProxyResponse{
@@ -62,41 +63,19 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				Body:       "Not Found",
 			}, nil
 		}
-		// For other errors, return 500
 		return events.APIGatewayProxyResponse{
 			StatusCode: 500,
 			Body:       "Internal Server Error",
 		}, nil
 	}
 
-	// Generate pre-signed URL
-	presignClient := s3.NewPresignClient(s3Client)
-	presignResult, err := presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(key),
-	}, func(opts *s3.PresignOptions) {
-		opts.Expires = 3600 * 24 // 24 hours
-	})
-	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       "Failed to generate pre-signed URL",
-		}, nil
-	}
-
-	// Parse the pre-signed URL to get the query string
-	parsedURL, err := url.Parse(presignResult.URL)
-	if err != nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: 500,
-			Body:       "Failed to parse pre-signed URL",
-		}, nil
-	}
+	// Construct the full S3 bucket URL
+	redirectURL := fmt.Sprintf("%s/%s", bucketURL, key)
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: 307, // Temporary Redirect
 		Headers: map[string]string{
-			"Location":      fmt.Sprintf("/%s?%s", key, parsedURL.RawQuery),
+			"Location":      redirectURL,
 			"Cache-Control": "public, max-age=31536000", // Cache for 1 year
 		},
 	}, nil
