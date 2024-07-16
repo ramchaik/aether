@@ -1,0 +1,64 @@
+service: s3proxy
+
+provider:
+  name: aws
+  runtime: go1.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  role: arn:aws:iam::502413910473:role/LabRole
+  environment:
+    BUCKET_NAME: aether-bucket
+
+package:
+  patterns:
+    - "!./**"
+    - "./bin/**"
+
+functions:
+  proxy:
+    handler: bin/proxy
+    events:
+      - http:
+          path: /{proxy+}
+          method: any
+    environment:
+      BASE_DOMAIN: aether.com
+      BUCKET_NAME: aether-bucket
+
+custom:
+  apiCloudFront:
+    domain: "*.aether.com"
+    certificate: ~ # No certificate for HTTP
+    compress: true
+    cookies: "none"
+    headers:
+      - Host
+    querystring: "all"
+    priceClass: "PriceClass_100"
+    minimumProtocolVersion: "TLSv1"
+    defaultTTL: 31536000 # 1 year
+    maxTTL: 31536000 # 1 year
+    minTTL: 0
+    origins:
+      - url: http://${self:provider.environment.BUCKET_NAME}.s3.amazonaws.com
+        pathPattern: "/*"
+        allowedHttpMethods: ["GET", "HEAD", "OPTIONS"]
+        forwardedHeaders:
+          - "Origin"
+          - "Access-Control-Request-Headers"
+          - "Access-Control-Request-Method"
+
+plugins:
+  - serverless-api-cloudfront
+
+resources:
+  Resources:
+    WildcardDNSRecord:
+      Type: AWS::Route53::RecordSet
+      Properties:
+        HostedZoneName: aether.com.
+        Name: "*.aether.com."
+        Type: A
+        AliasTarget:
+          DNSName: !GetAtt CloudFrontDistribution.DomainName
+          HostedZoneId: Z2FDTNDATAQYW2 # This is a static ID for CloudFront distributions

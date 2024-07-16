@@ -4,23 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "deploy": "serverless deploy",
-    "remove": "serverless remove",
-    "start": "serverless offline"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "engines": {
-    "node": ">=20.0.0"
-  },
   "devDependencies": {
-    "@types/aws-lambda": "^8.10.141",
-    "@types/node": "^20.14.10",
-    "esbuild": "^0.20.1",
-    "serverless": "^3.39.0",
-    "serverless-esbuild": "^1.52.1",
-    "serverless-offline": "^13.6.0",
-    "typescript": "^5.5.3"
+    "serverless": "^4.1.12",
+    "serverless-api-cloudfront": "^0.9.5"
   }
 }
