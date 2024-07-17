@@ -1,4 +1,5 @@
-# Simple Makefile for a Go project
+PROTO_DIR=../../protobuf
+GO_OUT_DIR=./internal/proto
 
 # Build the application
 all: build
@@ -57,4 +58,9 @@ watch:
 	    fi; \
 	fi
 
-.PHONY: all build run test clean
+generate-proto:
+	protoc -I=$(PROTO_DIR) --go_out=$(GO_OUT_DIR) --go_opt=paths=source_relative \
+		--go-grpc_out=$(GO_OUT_DIR) --go-grpc_opt=paths=source_relative \
+		$(PROTO_DIR)/*.proto
+
+.PHONY: all build run test clean generate-proto

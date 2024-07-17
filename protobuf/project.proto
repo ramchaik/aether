@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package project;
+
+option go_package = "./project";
+
+service ProjectService {
+  rpc SaveProjectUrl (SaveProjectUrlRequest) returns (SaveProjectUrlResponse) {}
+}
+
+message SaveProjectUrlRequest {
+  string project_url = 1;
+  string project_id = 2;
+}
+
+message SaveProjectUrlResponse {
+  bool success = 1;
+  string message = 2;
+}
