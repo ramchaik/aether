@@ -10,17 +10,23 @@ import (
 	"google.golang.org/grpc"
 )
 
-func NewGrpcClient(addr string) (*grpc.ClientConn, error) {
+type GrpcClient struct {
+	conn *grpc.ClientConn
+}
+
+func NewGrpcClient(addr string) (*GrpcClient, error) {
 	conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 		return nil, err
 	}
-	return conn, nil
+	return &GrpcClient{
+		conn: conn,
+	}, nil
 }
 
-func TestSaveProjectURL(conn *grpc.ClientConn, url string, projectId string) {
-	c := pb.NewProjectServiceClient(conn)
+func (gc *GrpcClient) TestSaveProjectURL(url string, projectId string) {
+	c := pb.NewProjectServiceClient(gc.conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
