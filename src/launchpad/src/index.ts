@@ -6,6 +6,7 @@ import Fastify from "fastify";
 import { pool } from "./db";
 import { authMiddleware } from "./middlewares";
 import registerRoutes from "./routes";
+import { startGrpcServer } from "./grpcServer";
 
 const PORT = (process.env.PORT || 8000) as number;
 declare module "fastify" {
@@ -37,7 +38,7 @@ app.addHook("onClose", async () => {
   await pool.end();
 });
 
-async function start() {
+async function startFastifyServer() {
   try {
     await app.listen({
       host: "0.0.0.0",
@@ -49,4 +50,5 @@ async function start() {
   }
 }
 
-start();
+startFastifyServer();
+startGrpcServer();
