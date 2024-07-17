@@ -1,7 +1,8 @@
 package main
 
 import (
-	"forge/internal/api"
+	"forge/internal"
+	"forge/internal/service"
 	"forge/internal/worker"
 	"log"
 	"os"
@@ -15,15 +16,13 @@ func main() {
 	}
 
 	GRPC_SERVER_ADDRESS := os.Getenv("GRPC_SERVER_ADDRESS")
-	grpcClient, err := api.NewGrpcClient(GRPC_SERVER_ADDRESS)
-	if err != nil {
-		log.Fatalf("failed to create gRPC client: %v", err)
-	}
+	grpcClient := internal.NewGrpcClient(GRPC_SERVER_ADDRESS)
+	defer grpcClient.Close()
 
-	grpcClient.TestSaveProjectURL("https://abc.com", "123-proj-id")
+	projectService := service.NewProjectServiceClient(grpcClient)
 
 	queueURL := os.Getenv("AWS_SQS_URL")
 	workerType := os.Getenv("WORKER_TYPE")
 
-	worker.Run(queueURL, workerType)
+	worker.Run(queueURL, workerType, projectService)
 }

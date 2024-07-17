@@ -2,6 +2,7 @@ package worker
 
 import (
 	"forge/internal/worker"
+	"log"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
@@ -13,7 +14,20 @@ type MockSQSService struct {
 	message types.Message
 }
 
+type MockGrpcClient struct {
+	conn string
+}
+
+func (g *MockGrpcClient) SaveProjectURL(url string, projectId string) {
+	log.Println("url: ", url, " projectId: ", projectId)
+}
+
 func TestProcessMessage(t *testing.T) {
+	// mock grpc client
+	mockClient := &MockGrpcClient{
+		conn: "test",
+	}
+
 	// Mock SQS message
 	mockMessage := types.Message{
 		Body: aws.String(`{"repoURL": "https://github.com/example/repo", "buildCommand": "go build"}`),
@@ -25,10 +39,10 @@ func TestProcessMessage(t *testing.T) {
 		},
 	}
 
-	isProcessed := worker.ProcessMessage(mockMessage, "Build")
+	isProcessed := worker.ProcessMessage(mockMessage, "Build", mockClient)
 	assert.True(t, isProcessed, "Expected message to be processed")
 
-	isProcessed = worker.ProcessMessage(mockMessage, "invalid-type")
+	isProcessed = worker.ProcessMessage(mockMessage, "invalid-type", mockClient)
 	assert.False(t, isProcessed, "Expected message to be rejected due to invalid type")
 
 	// Test invalid JSON message body
@@ -42,7 +56,7 @@ func TestProcessMessage(t *testing.T) {
 		},
 	}
 
-	isProcessed = worker.ProcessMessage(invalidMessage, "Build")
+	isProcessed = worker.ProcessMessage(invalidMessage, "Build", mockClient)
 	assert.False(t, isProcessed, "Expected message with invalid JSON to be rejected")
 
 	// Test missing message attributes
@@ -50,6 +64,6 @@ func TestProcessMessage(t *testing.T) {
 		Body: aws.String(`{"repoURL": "https://github.com/example/repo", "buildCommand": "go build"}`),
 	}
 
-	isProcessed = worker.ProcessMessage(missingAttributes, "Build")
+	isProcessed = worker.ProcessMessage(missingAttributes, "Build", mockClient)
 	assert.False(t, isProcessed, "Expected message with missing attributes to be rejected")
 }

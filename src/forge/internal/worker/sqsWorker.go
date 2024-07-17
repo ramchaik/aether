@@ -4,23 +4,23 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"forge/internal/service"
 	"forge/internal/utils"
 	"log"
 	"os"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
-	"github.com/google/uuid"
 )
 
 type Message struct {
-	// ProjectId    string `json:"projectId"`
+	ProjectId    string `json:"projectId"`
 	RepoURL      string `json:"repoURL"`
 	BuildCommand string `json:"buildCommand"`
 }
 
 // ProcessMessage takes a message and performs the necessary actions based on the message content.
-func ProcessMessage(message types.Message, workerType string) bool {
+func ProcessMessage(message types.Message, workerType string, projectService service.ProjectService) bool {
 	if message.Body == nil || message.MessageAttributes == nil {
 		log.Println("Invalid message received")
 		return false
@@ -40,6 +40,7 @@ func ProcessMessage(message types.Message, workerType string) bool {
 		return false
 	}
 
+	projectId := msg.ProjectId
 	repoURL := msg.RepoURL
 	buildCommand := msg.BuildCommand
 
@@ -51,8 +52,7 @@ func ProcessMessage(message types.Message, workerType string) bool {
 	}
 
 	bucketName := os.Getenv("AWS_BUCKET_NAME")
-	// TODO: use the projectID for instead of uuid
-	prefix := fmt.Sprintf("projects/%s/build/", uuid.New().String())
+	prefix := fmt.Sprintf("projects/%s/build/", projectId)
 
 	s3Client, err := utils.GetS3Service()
 	if err != nil {
@@ -65,11 +65,18 @@ func ProcessMessage(message types.Message, workerType string) bool {
 
 	utils.Cleanup(ctx, cli, buildDir, imageName)
 
+	// Sample url
+	// https://<bucket-name>.s3.amazonaws.com/projects/<projectId>/build/index.html
+	projectURL := fmt.Sprintf("https://%s.s3.amazonaws.com/%sindex.html", bucketName, prefix)
+
+	// Call launchpad
+	projectService.SaveProjectURL(projectURL, projectId)
+
 	return true
 }
 
 // Run listens to an SQS queue and processes messages.
-func Run(queueURL string, workerType string) {
+func Run(queueURL string, workerType string, projectService service.ProjectService) {
 	sqsSvc, err := utils.GetSQSService()
 	if err != nil {
 		log.Fatalf("Failed to get SQS service %v", err)
@@ -90,7 +97,7 @@ func Run(queueURL string, workerType string) {
 		}
 
 		for _, message := range result.Messages {
-			messageStatus := ProcessMessage(message, workerType)
+			messageStatus := ProcessMessage(message, workerType, projectService)
 			if !messageStatus {
 				log.Printf("Failed to process message [message id: %s]\n", *message.MessageId)
 				break
