@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "us-east-1"
+  region = var.region
 }
 
 data "aws_availability_zones" "available" {
@@ -46,7 +46,7 @@ resource "aws_route_table_association" "public" {
 
 resource "aws_eks_cluster" "main" {
   name     = "main-cluster"
-  role_arn = "arn:aws:iam::502413910473:role/LabRole"
+  role_arn = var.eks_role_arn
   vpc_config {
     subnet_ids = aws_subnet.public[*].id
   }
@@ -56,7 +56,7 @@ resource "aws_eks_cluster" "main" {
 resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "main-node-group"
-  node_role_arn   = "arn:aws:iam::502413910473:role/LabRole"
+  node_role_arn   = var.node_role_arn
   subnet_ids      = aws_subnet.public[*].id
   scaling_config {
     desired_size = 1
@@ -67,6 +67,7 @@ resource "aws_eks_node_group" "main" {
   capacity_type  = "SPOT"
   depends_on     = [aws_eks_cluster.main]
 }
+
 
 resource "aws_db_subnet_group" "main" {
   name       = "main"
@@ -102,8 +103,8 @@ resource "aws_db_instance" "main" {
   allocated_storage    = 10
   storage_type         = "gp2"
   db_name              = "aether"
-  username             = "vaibhavadmin"
-  password             = "vaibhavadmin"
+  username             = var.db_username
+  password             = var.db_password
   parameter_group_name = "default.postgres15"
   skip_final_snapshot  = true
 
@@ -115,10 +116,11 @@ resource "aws_db_instance" "main" {
   }
 }
 
+
 resource "aws_s3_bucket" "aether" {
-  bucket = "aether-bucket"
+  bucket = var.s3_bucket_name
   tags = {
-    Name = "aether-bucket"
+    Name = var.s3_bucket_name
   }
 }
 
@@ -149,14 +151,14 @@ resource "aws_s3_bucket_public_access_block" "aether" {
 }
 
 resource "aws_sqs_queue" "aether" {
-  name = "aether-queue"
+  name = var.sqs_queue_name
 }
 
 resource "aws_ecr_repository" "aether" {
-  name                 = "aether-repo"
+  name                 = var.ecr_repository_name
   image_tag_mutability = "MUTABLE"
   tags = {
-    Name = "aether-repo"
+    Name = var.ecr_repository_name
   }
 }
 
