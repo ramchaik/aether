@@ -36,12 +36,23 @@ spec:
               value: us-east-1
             - name: AWS_SQS_URL
               value: https://sqs.us-east-1.amazonaws.com/502413910473/aether-queue
+            - name: GRPC_SERVER_ADDRESS
+              value: "launchpad-service:50051"
             # - name: AWS_ACCESS_KEY_ID
-            #   value: ""
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: aws-credentials
+            #       key: AWS_ACCESS_KEY_ID
             # - name: AWS_SECRET_ACCESS_KEY
-            #   value: ""
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: aws-credentials
+            #       key: AWS_SECRET_ACCESS_KEY
             # - name: AWS_SESSION_TOKEN
-            #   value: ""
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: aws-credentials
+            #       key: AWS_SESSION_TOKEN
 
 ---
 apiVersion: v1

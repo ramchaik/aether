@@ -15,9 +15,9 @@ spec:
       containers:
         - name: launchpad-app-container
           image: vsramchaik/aether-launchpad:latest
-          # imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8000
+            - containerPort: 8000 # HTTP server
+            - containerPort: 50051 # gRPC
           resources:
             requests:
               memory: 500Mi
@@ -28,6 +28,8 @@ spec:
           env:
             - name: DATABASE_URL
               value: "postgresql://vaibhav:vaibhav@postgres:5432/aether"
+            - name: GRPC_SERVER_ADDRESS
+              value: "0.0.0.0:50051"
       initContainers:
         - name: migrate
           image: vsramchaik/aether-launchpad:latest
@@ -63,4 +65,8 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8000
+    - name: grpc
+      protocol: TCP
+      port: 50051
+      targetPort: 50051
   type: ClusterIP
