@@ -43,36 +43,37 @@ const ProjectList: React.FC = () => {
         </Button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {displayProjects.map((project) => (
-          <MotionDiv
-            key={project.id}
-            whileHover={{ scale: 1.03 }}
-            transition={{ type: "spring", stiffness: 300 }}
-          >
-            <Card isHoverable className="cursor-pointer">
-              <CardHeader className="flex flex-col items-start">
-                <h4 className="text-large font-bold">{project.name}</h4>
-                <p className="text-small text-default-500">
-                  {project.repositoryUrl}
-                </p>
-              </CardHeader>
-              <CardBody>
-                {/* You can add more project details here if needed */}
-              </CardBody>
-              <CardFooter>
-                <Link
-                  href={`/projects/${project.id}`}
-                  passHref
-                  className="w-full"
-                >
-                  <Button as="a" color="primary" className="w-full">
-                    View Details
-                  </Button>
-                </Link>
-              </CardFooter>
-            </Card>
-          </MotionDiv>
-        ))}
+        {!!displayProjects.length &&
+          displayProjects.map((project) => (
+            <MotionDiv
+              key={project.id}
+              whileHover={{ scale: 1.03 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Card isHoverable className="cursor-pointer">
+                <CardHeader className="flex flex-col items-start">
+                  <h4 className="text-large font-bold">{project.name}</h4>
+                  <p className="text-small text-default-500">
+                    {project.repositoryUrl}
+                  </p>
+                </CardHeader>
+                <CardBody>
+                  {/* You can add more project details here if needed */}
+                </CardBody>
+                <CardFooter>
+                  <Link
+                    href={`/projects/${project.id}`}
+                    passHref
+                    className="w-full"
+                  >
+                    <Button as="a" color="primary" className="w-full">
+                      View Details
+                    </Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+            </MotionDiv>
+          ))}
       </div>
       <Modal
         isOpen={isModalOpen}

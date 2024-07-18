@@ -11,19 +11,9 @@ import {
   Tooltip,
 } from "@nextui-org/react";
 import { motion } from "framer-motion";
-
-// Dummy data for the project
-const projectData = {
-  id: "proj_123456",
-  name: "My Awesome Project",
-  slug: "my-awesome-project",
-  repoUrl: "https://github.com/user/my-awesome-project",
-  customDomain: "www.myawesomeproject.com",
-  buildCommand: "npm run build",
-  createdAt: "2024-07-11T10:00:00Z",
-  status: "Live",
-  domain: "my-awesome-project.vercel.app",
-};
+import { useParams } from "next/navigation";
+import { useFetchProject } from "@/hooks/useProjectApi";
+import { Project } from "@/store/useProjectStore";
 
 // Dummy build logs
 const buildLogs = [
@@ -46,6 +36,16 @@ const buildLogs = [
 ];
 
 const ProjectDetailPage: React.FC = () => {
+  const params = useParams();
+  const projectId = params.id as string;
+  const {
+    data: project,
+    isLoading,
+    // error,
+  } = useFetchProject<Project>(projectId);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (!project) return <div>Project not found</div>;
   return (
     <div className="container mx-auto px-4 py-10">
       <motion.div
@@ -55,10 +55,10 @@ const ProjectDetailPage: React.FC = () => {
       >
         <Card className="mb-6">
           <CardHeader className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold">{projectData.name}</h1>
-            <Chip color={projectData.status === "Live" ? "success" : "warning"}>
-              {projectData.status}
-            </Chip>
+            <h1 className="text-2xl font-bold">{project.name}</h1>
+            {/* <Chip color={project.status === "Live" ? "success" : "warning"}>
+              {project.status}
+            </Chip> */}
           </CardHeader>
           <Divider />
           <CardBody>
@@ -66,33 +66,34 @@ const ProjectDetailPage: React.FC = () => {
               <div>
                 <p>
                   <span className="font-semibold">Project ID:</span>{" "}
-                  {projectData.id}
+                  {project.id}
                 </p>
                 <p>
-                  <span className="font-semibold">Slug:</span>{" "}
-                  {projectData.slug}
+                  <span className="font-semibold">Slug:</span> {project.slug}
                 </p>
                 <p>
                   <span className="font-semibold">Repository:</span>{" "}
-                  {projectData.repoUrl}
+                  {project.repositoryUrl}
                 </p>
-                <p>
-                  <span className="font-semibold">Custom Domain:</span>{" "}
-                  {projectData.customDomain}
-                </p>
+                {!!project.customDomain && (
+                  <p>
+                    <span className="font-semibold">Custom Domain:</span>{" "}
+                    {project.customDomain}
+                  </p>
+                )}
               </div>
               <div>
                 <p>
                   <span className="font-semibold">Build Command:</span>{" "}
-                  {projectData.buildCommand}
+                  {project.buildCommand}
                 </p>
                 <p>
                   <span className="font-semibold">Created At:</span>{" "}
-                  {new Date(projectData.createdAt).toLocaleString()}
+                  {new Date(project.createdAt).toLocaleString()}
                 </p>
                 <p>
-                  <span className="font-semibold">Vercel Domain:</span>{" "}
-                  {projectData.domain}
+                  <span className="font-semibold">Domain:</span>{" "}
+                  {project.domain}
                 </p>
               </div>
             </div>
@@ -101,7 +102,7 @@ const ProjectDetailPage: React.FC = () => {
                 <Button
                   color="primary"
                   as="a"
-                  href={`https://${projectData.domain}`}
+                  href={`https://${project.domain}`}
                   target="_blank"
                 >
                   Visit Site

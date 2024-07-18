@@ -89,12 +89,12 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ onClose }) => {
           onChange={handleInputChange}
           required
         />
-        <Input
+        {/* <Input
           label="Custom Domain (optional)"
           name="customDomain"
           value={formData.customDomain}
           onChange={handleInputChange}
-        />
+        /> */}
         <Tooltip content="e.g., npm run dev, npm start">
           <Input
             label="Build Command"
