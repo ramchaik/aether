@@ -21,6 +21,7 @@ import { Project } from "@/store/useProjectStore";
 import { useAuth } from "@clerk/nextjs";
 import toast from "react-hot-toast";
 import Loader from "@/components/loader";
+import Error from "@/components/error";
 
 // Dummy build logs
 const buildLogs = [
@@ -48,7 +49,7 @@ const ProjectDetailPage: React.FC = () => {
   const {
     data: project,
     isLoading,
-    // error,
+    error,
   } = useFetchProject<Project>(projectId);
 
   const deployProjectMutation = useDeployProject();
@@ -66,6 +67,7 @@ const ProjectDetailPage: React.FC = () => {
     }
   };
 
+  if (error) return <Error message={"Something went wrong"} />;
   if (isLoading) return <Loader size="lg" color="primary" />;
   if (!project) return <div>Project not found</div>;
   return (
@@ -124,7 +126,7 @@ const ProjectDetailPage: React.FC = () => {
                 <Button
                   color="primary"
                   as="a"
-                  href={`https://${project.domain}`}
+                  href={project.domain}
                   target="_blank"
                 >
                   Visit Site
