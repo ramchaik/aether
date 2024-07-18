@@ -100,6 +100,7 @@ async function readAllProjectHandler(
     const projects = await repository.readAllProjects(userId);
     reply.code(HTTP_CODES.OK).send(projects);
   } catch (error) {
+    reply.log.error(error);
     reply.code(HTTP_CODES.INTERNAL_SERVER_ERROR).send({
       error: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
     });

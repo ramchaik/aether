@@ -38,7 +38,7 @@ app.addHook("onClose", async () => {
   await pool.end();
 });
 
-async function startFastifyServer() {
+async function startHttpServer() {
   try {
     await app.listen({
       host: "0.0.0.0",
@@ -50,5 +50,5 @@ async function startFastifyServer() {
   }
 }
 
-startFastifyServer();
+startHttpServer();
 startGrpcServer();

@@ -33,7 +33,7 @@ export const startGrpcServer = async () => {
         console.error("Failed to bind server:", err);
         return;
       }
-      console.log(`Server running at http://0.0.0.0:${port}`);
+      fastify.log.info(`GRPC Server running at http://0.0.0.0:${port}`);
       server.start();
     }
   );
