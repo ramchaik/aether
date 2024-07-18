@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Card,
   CardBody,
@@ -12,8 +12,15 @@ import {
 } from "@nextui-org/react";
 import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
-import { useFetchProject } from "@/hooks/useProjectApi";
+import {
+  deployProject,
+  useDeployProject,
+  useFetchProject,
+} from "@/hooks/useProjectApi";
 import { Project } from "@/store/useProjectStore";
+import { useAuth } from "@clerk/nextjs";
+import toast from "react-hot-toast";
+import Loader from "@/components/loader";
 
 // Dummy build logs
 const buildLogs = [
@@ -44,7 +51,22 @@ const ProjectDetailPage: React.FC = () => {
     // error,
   } = useFetchProject<Project>(projectId);
 
-  if (isLoading) return <div>Loading...</div>;
+  const deployProjectMutation = useDeployProject();
+  const [isDeploying, setIsDeploying] = useState(false);
+
+  const handleRebuild = async () => {
+    setIsDeploying(true);
+    try {
+      await deployProjectMutation.mutateAsync(projectId);
+      toast.success("Deployment started successfully!");
+    } catch (error) {
+      toast.error("Failed to start deployment. Please try again.");
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
+  if (isLoading) return <Loader size="lg" color="primary" />;
   if (!project) return <div>Project not found</div>;
   return (
     <div className="container mx-auto px-4 py-10">
@@ -109,7 +131,13 @@ const ProjectDetailPage: React.FC = () => {
                 </Button>
               </Tooltip>
               <Tooltip content="Trigger a new build">
-                <Button color="secondary">Rebuild</Button>
+                <Button
+                  color="secondary"
+                  onClick={handleRebuild}
+                  isLoading={isDeploying}
+                >
+                  {isDeploying ? "Deploying..." : "Rebuild"}
+                </Button>
               </Tooltip>
             </div>
           </CardBody>

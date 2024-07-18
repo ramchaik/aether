@@ -16,6 +16,7 @@ import ProjectForm from "./project-form";
 import Link from "next/link";
 import { useFetchAllProjects } from "@/hooks/useProjectApi";
 import useProjectStore, { Project } from "@/store/useProjectStore";
+import Loader from "./loader";
 
 const MotionDiv = dynamic(
   () => import("framer-motion").then((mod) => mod.motion.div),
@@ -24,7 +25,7 @@ const MotionDiv = dynamic(
 
 const ProjectList: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { data: projects } = useFetchAllProjects<Project[]>();
+  const { data: projects, isLoading } = useFetchAllProjects<Project[]>();
   const { setProjects } = useProjectStore();
   useEffect(() => {
     if (projects) {
@@ -33,6 +34,8 @@ const ProjectList: React.FC = () => {
   }, [projects, setProjects]);
 
   const displayProjects = useProjectStore((state) => state.projects);
+
+  if (isLoading) return <Loader size="lg" color="primary" />;
 
   return (
     <div className="container mx-auto p-4">

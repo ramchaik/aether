@@ -3,6 +3,7 @@ import { useAuth } from "@clerk/nextjs";
 
 const ALL_PROJECTS_QUERY_KEY = "allProjects";
 const PROJECT_QUERY_KEY = "project";
+const PROJECT_DEPLOY_QUERY_KEY = "projectDeploy";
 
 interface ProjectData {
   name: string;
@@ -63,6 +64,26 @@ const fetchProject = async (projectId: string, token: string | null) => {
   return response.json();
 };
 
+export const deployProject = async (
+  projectId: string,
+  token: string | null
+) => {
+  const response = await fetch(`/api/project/${projectId}/deploy`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({}),
+  });
+
+  if (!response.ok) {
+    throw new Error("Something went wrong");
+  }
+
+  return response.json();
+};
+
 export function useCreateProject() {
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
@@ -105,4 +126,22 @@ export function useFetchProject<T>(projectId: string) {
     // Only fetch when projectId is available
     enabled: !!projectId,
   });
+}
+
+export function useDeployProject() {
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation(
+    async (projectId: string) => {
+      const token = await getToken();
+      return deployProject(projectId, token);
+    },
+    {
+      onSuccess: (_, projectId) => {
+        // Invalidate and refetch the project query
+        queryClient.invalidateQueries([PROJECT_QUERY_KEY, projectId]);
+      },
+    }
+  );
 }
