@@ -1,13 +1,10 @@
-import fastify, {
-  FastifyInstance,
-  FastifyReply,
-  FastifyRequest,
-} from "fastify";
+import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 // @ts-ignore
 import { z } from "zod";
-import { ERROR_MESSAGES, HTTP_CODES } from "../utils/httpCodes";
 import * as repository from "../repository/project";
 import { pushMessageToDeployQueue } from "../utils/awsSqs";
+import { ERROR_MESSAGES, HTTP_CODES } from "../utils/httpCodes";
+import { getProjectDomain } from "../utils/project";
 
 const createProjectSchema = z.object({
   name: z.string().min(1).max(100),
@@ -78,6 +75,9 @@ async function readProjectHandler(
     const { id } = request.params as { id: string };
     const userId = request.userId;
     const project = await repository.readProject(userId, id);
+    // TODO: fix this when saving project
+    // Update domain
+    project.domain = await getProjectDomain(project.id);
     reply.code(HTTP_CODES.OK).send(project);
   } catch (error) {
     if ((error as Error).message === "Project: 404") {

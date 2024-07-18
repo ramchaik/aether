@@ -16,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-api-gateway": "^3.614.0",
     "@aws-sdk/client-sqs": "^3.614.0",
     "@clerk/fastify": "^1.0.18",
     "@fastify/cors": "^9.0.1",
