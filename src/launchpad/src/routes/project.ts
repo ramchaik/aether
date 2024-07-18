@@ -7,6 +7,7 @@ import fastify, {
 import { z } from "zod";
 import { ERROR_MESSAGES, HTTP_CODES } from "../utils/httpCodes";
 import * as repository from "../repository/project";
+import { pushMessageToDeployQueue } from "../utils/awsSqs";
 
 const createProjectSchema = z.object({
   name: z.string().min(1).max(100),
@@ -40,6 +41,7 @@ async function createProjectHandler(
         });
       }
     } else {
+      // @ts-ignore
       customDomain = null;
     }
 
@@ -107,8 +109,46 @@ async function readAllProjectHandler(
   }
 }
 
+async function deployProjectHandler(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  try {
+    const { id } = request.params as { id: string };
+    const userId = request.userId;
+    const project = await repository.readProject(userId, id);
+
+    const message = {
+      projectId: project.id,
+      repoURL: project.repositoryUrl,
+      buildCommand: project.buildCommand,
+    };
+
+    // TODO: add a status<deploying|not-live|live> on project, update that to deploying here
+
+    const messageId = await pushMessageToDeployQueue(message);
+
+    reply.code(HTTP_CODES.OK).send({
+      success: true,
+      messageId: messageId,
+    });
+  } catch (error) {
+    if ((error as Error).message === "Project: 404") {
+      reply.code(HTTP_CODES.NOT_FOUND).send({
+        error: ERROR_MESSAGES.PROJECT_NOT_FOUND,
+      });
+    } else {
+      reply.log.error(error);
+      reply.code(HTTP_CODES.INTERNAL_SERVER_ERROR).send({
+        error: ERROR_MESSAGES.INTERNAL_SERVER_ERROR,
+      });
+    }
+  }
+}
+
 export default async function registerRoutes(fastify: FastifyInstance) {
   fastify.post<{ Body: CreateProjectBody }>("/project", createProjectHandler);
+  fastify.post("/project/:id/deploy", deployProjectHandler);
   fastify.get("/project/:id", readProjectHandler);
   fastify.get("/project", readAllProjectHandler);
 }

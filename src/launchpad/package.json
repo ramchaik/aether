@@ -16,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-sqs": "^3.614.0",
     "@clerk/fastify": "^1.0.18",
     "@fastify/cors": "^9.0.1",
     "@fastify/type-provider-typebox": "^4.0.0",
@@ -34,6 +35,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@grpc/grpc-js": "^1.11.1",
+    "@grpc/proto-loader": "^0.7.13",
     "@types/google-protobuf": "^3.15.12",
     "@types/node": "^20.14.9",
     "@types/pg": "^8.11.6",
@@ -41,11 +44,9 @@
     "drizzle-orm": "^0.32.0",
     "esbuild": "^0.21.5",
     "grpc-tools": "^1.12.4",
+    "protobufjs": "^7.3.2",
     "ts-proto": "^1.181.1",
     "tsx": "^4.16.2",
-    "typescript": "^5.5.2",
-    "@grpc/grpc-js": "^1.11.1",
-    "@grpc/proto-loader": "^0.7.13",
-    "protobufjs": "^7.3.2"
+    "typescript": "^5.5.2"
   }
 }
