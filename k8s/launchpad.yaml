@@ -30,6 +30,8 @@ spec:
               value: "postgresql://vaibhav:vaibhav@postgres:5432/aether"
             - name: GRPC_SERVER_ADDRESS
               value: "0.0.0.0:50051"
+            - name: PROXY_SVC
+              value: "proxy-service"
       initContainers:
         - name: migrate
           image: vsramchaik/aether-launchpad:latest
