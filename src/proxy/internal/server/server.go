@@ -24,9 +24,9 @@ func NewServer() *http.Server {
 		log.Fatalf("Invalid PORT: %v", err)
 	}
 
-	basePath := os.Getenv("BASE_PATH")
+	basePath := os.Getenv("BUCKET_BASE_PATH")
 	if basePath == "" {
-		log.Fatal("BASE_PATH environment variable is not set")
+		log.Fatal("BUCKET_BASE_PATH environment variable is not set")
 	}
 
 	s := &Server{
