@@ -2,29 +2,26 @@ package server
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
-
-	"logify/internal/database"
 )
 
 type Server struct {
 	port int
-
-	db database.Service
 }
 
 func NewServer() *http.Server {
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
 	NewServer := &Server{
 		port: port,
-
-		db: database.New(),
 	}
+
+	log.Println("HTTP server running at", port)
 
 	// Declare Server config
 	server := &http.Server{
