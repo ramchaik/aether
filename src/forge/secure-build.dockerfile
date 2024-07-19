@@ -19,7 +19,6 @@ ARG BUILD_COMMAND
 RUN git clone ${REPO_URL} ./repo
 WORKDIR /app/repo
 
-# Install project dependencies
 RUN if [ -f yarn.lock ]; then \
     yarn install --frozen-lockfile; \
     elif [ -f package-lock.json ]; then \
@@ -28,7 +27,6 @@ RUN if [ -f yarn.lock ]; then \
     npm install; \
     fi
 
-# Ensure react-scripts is installed if it's a dependency
 RUN if grep -q '"react-scripts"' package.json; then \
     npm install react-scripts; \
     fi
