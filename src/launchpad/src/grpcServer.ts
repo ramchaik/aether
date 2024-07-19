@@ -2,23 +2,62 @@ import Fastify from "fastify";
 import * as grpc from "@grpc/grpc-js";
 import {
   ProjectServiceService,
-  SaveProjectUrlRequest,
-  SaveProjectUrlResponse,
-} from "./proto/project";
+  UpdateProjectStatusRequest,
+  UpdateProjectStatusResponse,
+  ProjectStatus,
+} from "./genprotobuf/project";
+import { DBProjectStatus, updateStatusForProject } from "./repository/project";
 
 const fastify = Fastify({ logger: true });
 
 const server = new grpc.Server();
 
 server.addService(ProjectServiceService, {
-  saveProjectUrl: (
-    call: grpc.ServerUnaryCall<SaveProjectUrlRequest, SaveProjectUrlResponse>,
-    callback: grpc.sendUnaryData<SaveProjectUrlResponse>
+  updateProjectStatus: async (
+    call: grpc.ServerUnaryCall<
+      UpdateProjectStatusRequest,
+      UpdateProjectStatusResponse
+    >,
+    callback: grpc.sendUnaryData<UpdateProjectStatusResponse>
   ) => {
-    const { projectUrl, projectId } = call.request;
-    console.log(`Saving project: ${projectId} - ${projectUrl}`);
+    const { projectId, status } = call.request;
+    console.log(
+      `Updating project status: ${projectId} - ${ProjectStatus[status]}`
+    );
 
-    callback(null, { success: true, message: "Project saved successfully" });
+    try {
+      let statusToSet: DBProjectStatus;
+      if (typeof status === "number") {
+        switch (status) {
+          case 0:
+            statusToSet = "NOT_LIVE";
+            break;
+          case 1:
+            statusToSet = "LIVE";
+            break;
+          case 2:
+            statusToSet = "DEPLOYING";
+            break;
+          default:
+            throw new Error("Invalid status value");
+        }
+      } else {
+        statusToSet = status;
+      }
+
+      await updateStatusForProject(projectId, statusToSet);
+
+      callback(null, {
+        success: true,
+        message: `Project ${projectId} status updated to ${ProjectStatus[status]} successfully`,
+      });
+    } catch (error) {
+      console.error(error);
+      callback(null, {
+        success: false,
+        message: `Failed to update project ${projectId} - expected status ${ProjectStatus[status]}`,
+      });
+    }
   },
 });
 

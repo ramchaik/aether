@@ -1,5 +1,11 @@
-import { pgTable, uuid, varchar, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+
+export const projectStatusEnum = pgEnum("project_status", [
+  "NOT_LIVE",
+  "LIVE",
+  "DEPLOYING",
+]);
 
 export const Project = pgTable("projects", {
   id: uuid("id")
@@ -20,4 +26,5 @@ export const Project = pgTable("projects", {
     .default(sql`now()`)
     .$onUpdateFn(() => sql`now()`),
   userId: varchar("clerk_user_id"),
+  status: projectStatusEnum("status").default("NOT_LIVE"),
 });

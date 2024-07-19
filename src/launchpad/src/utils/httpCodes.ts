@@ -16,6 +16,7 @@ export const ERROR_MESSAGES = {
   PROJECT_CREATE_FAILED: "Failed to create project",
   PROJECT_NOT_FOUND: "Project not found",
   DEPLOYMENT_FAILED: "Failed to deploy project",
+  DEPLOYMENT_INPROGRESS: "Failed to deploy as its already in progress",
   INTERNAL_SERVER_ERROR: "Internal server error",
 } as const;
 

@@ -1,10 +1,10 @@
 import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 // @ts-ignore
 import { z } from "zod";
+import { projectStatusEnum } from "../db/schema";
 import * as repository from "../repository/project";
 import { pushMessageToDeployQueue } from "../utils/awsSqs";
 import { ERROR_MESSAGES, HTTP_CODES } from "../utils/httpCodes";
-import { getProjectDomain } from "../utils/project";
 
 const createProjectSchema = z.object({
   name: z.string().min(1).max(100),
@@ -12,6 +12,8 @@ const createProjectSchema = z.object({
   repositoryUrl: z.string(),
   buildCommand: z.string().optional(),
 });
+
+const PROXY_SVC = process.env.PROXY_SVC;
 
 type CreateProjectBody = z.infer<typeof createProjectSchema>;
 
@@ -75,9 +77,11 @@ async function readProjectHandler(
     const { id } = request.params as { id: string };
     const userId = request.userId;
     const project = await repository.readProject(userId, id);
+
     // TODO: fix this when saving project
     // Update domain
-    project.domain = await getProjectDomain(project.id);
+    project.domain = `http://${project.id}.${PROXY_SVC}`;
+
     reply.code(HTTP_CODES.OK).send(project);
   } catch (error) {
     if ((error as Error).message === "Project: 404") {
@@ -116,7 +120,15 @@ async function deployProjectHandler(
   try {
     const { id } = request.params as { id: string };
     const userId = request.userId;
+
     const project = await repository.readProject(userId, id);
+
+    if (project.status === projectStatusEnum.enumValues[2]) {
+      reply.code(HTTP_CODES.BAD_REQUEST).send({
+        error: ERROR_MESSAGES.DEPLOYMENT_INPROGRESS,
+      });
+      return;
+    }
 
     const message = {
       projectId: project.id,
@@ -124,9 +136,13 @@ async function deployProjectHandler(
       buildCommand: project.buildCommand,
     };
 
-    // TODO: add a status<deploying|not-live|live> on project, update that to deploying here
-
     const messageId = await pushMessageToDeployQueue(message);
+
+    // Update status a deploying
+    await repository.updateStatusForProject(
+      project.id,
+      projectStatusEnum.enumValues[2]
+    );
 
     reply.code(HTTP_CODES.OK).send({
       success: true,

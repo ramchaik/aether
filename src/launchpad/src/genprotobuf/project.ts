@@ -21,35 +21,74 @@ import _m0 from "protobufjs/minimal";
 
 export const protobufPackage = "project";
 
-export interface SaveProjectUrlRequest {
-  projectUrl: string;
-  projectId: string;
+export enum ProjectStatus {
+  NOT_LIVE = 0,
+  LIVE = 1,
+  DEPLOYING = 2,
+  UNRECOGNIZED = -1,
 }
 
-export interface SaveProjectUrlResponse {
+export function projectStatusFromJSON(object: any): ProjectStatus {
+  switch (object) {
+    case 0:
+    case "NOT_LIVE":
+      return ProjectStatus.NOT_LIVE;
+    case 1:
+    case "LIVE":
+      return ProjectStatus.LIVE;
+    case 2:
+    case "DEPLOYING":
+      return ProjectStatus.DEPLOYING;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return ProjectStatus.UNRECOGNIZED;
+  }
+}
+
+export function projectStatusToJSON(object: ProjectStatus): string {
+  switch (object) {
+    case ProjectStatus.NOT_LIVE:
+      return "NOT_LIVE";
+    case ProjectStatus.LIVE:
+      return "LIVE";
+    case ProjectStatus.DEPLOYING:
+      return "DEPLOYING";
+    case ProjectStatus.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
+export interface UpdateProjectStatusRequest {
+  projectId: string;
+  status: ProjectStatus;
+}
+
+export interface UpdateProjectStatusResponse {
   success: boolean;
   message: string;
 }
 
-function createBaseSaveProjectUrlRequest(): SaveProjectUrlRequest {
-  return { projectUrl: "", projectId: "" };
+function createBaseUpdateProjectStatusRequest(): UpdateProjectStatusRequest {
+  return { projectId: "", status: 0 };
 }
 
-export const SaveProjectUrlRequest = {
-  encode(message: SaveProjectUrlRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.projectUrl !== "") {
-      writer.uint32(10).string(message.projectUrl);
-    }
+export const UpdateProjectStatusRequest = {
+  encode(message: UpdateProjectStatusRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.projectId !== "") {
-      writer.uint32(18).string(message.projectId);
+      writer.uint32(10).string(message.projectId);
+    }
+    if (message.status !== 0) {
+      writer.uint32(16).int32(message.status);
     }
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): SaveProjectUrlRequest {
+  decode(input: _m0.Reader | Uint8Array, length?: number): UpdateProjectStatusRequest {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseSaveProjectUrlRequest();
+    const message = createBaseUpdateProjectStatusRequest();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -58,14 +97,14 @@ export const SaveProjectUrlRequest = {
             break;
           }
 
-          message.projectUrl = reader.string();
+          message.projectId = reader.string();
           continue;
         case 2:
-          if (tag !== 18) {
+          if (tag !== 16) {
             break;
           }
 
-          message.projectId = reader.string();
+          message.status = reader.int32() as any;
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -76,41 +115,41 @@ export const SaveProjectUrlRequest = {
     return message;
   },
 
-  fromJSON(object: any): SaveProjectUrlRequest {
+  fromJSON(object: any): UpdateProjectStatusRequest {
     return {
-      projectUrl: isSet(object.projectUrl) ? globalThis.String(object.projectUrl) : "",
       projectId: isSet(object.projectId) ? globalThis.String(object.projectId) : "",
+      status: isSet(object.status) ? projectStatusFromJSON(object.status) : 0,
     };
   },
 
-  toJSON(message: SaveProjectUrlRequest): unknown {
+  toJSON(message: UpdateProjectStatusRequest): unknown {
     const obj: any = {};
-    if (message.projectUrl !== "") {
-      obj.projectUrl = message.projectUrl;
-    }
     if (message.projectId !== "") {
       obj.projectId = message.projectId;
+    }
+    if (message.status !== 0) {
+      obj.status = projectStatusToJSON(message.status);
     }
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<SaveProjectUrlRequest>, I>>(base?: I): SaveProjectUrlRequest {
-    return SaveProjectUrlRequest.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<UpdateProjectStatusRequest>, I>>(base?: I): UpdateProjectStatusRequest {
+    return UpdateProjectStatusRequest.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<SaveProjectUrlRequest>, I>>(object: I): SaveProjectUrlRequest {
-    const message = createBaseSaveProjectUrlRequest();
-    message.projectUrl = object.projectUrl ?? "";
+  fromPartial<I extends Exact<DeepPartial<UpdateProjectStatusRequest>, I>>(object: I): UpdateProjectStatusRequest {
+    const message = createBaseUpdateProjectStatusRequest();
     message.projectId = object.projectId ?? "";
+    message.status = object.status ?? 0;
     return message;
   },
 };
 
-function createBaseSaveProjectUrlResponse(): SaveProjectUrlResponse {
+function createBaseUpdateProjectStatusResponse(): UpdateProjectStatusResponse {
   return { success: false, message: "" };
 }
 
-export const SaveProjectUrlResponse = {
-  encode(message: SaveProjectUrlResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+export const UpdateProjectStatusResponse = {
+  encode(message: UpdateProjectStatusResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.success !== false) {
       writer.uint32(8).bool(message.success);
     }
@@ -120,10 +159,10 @@ export const SaveProjectUrlResponse = {
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): SaveProjectUrlResponse {
+  decode(input: _m0.Reader | Uint8Array, length?: number): UpdateProjectStatusResponse {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseSaveProjectUrlResponse();
+    const message = createBaseUpdateProjectStatusResponse();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -150,14 +189,14 @@ export const SaveProjectUrlResponse = {
     return message;
   },
 
-  fromJSON(object: any): SaveProjectUrlResponse {
+  fromJSON(object: any): UpdateProjectStatusResponse {
     return {
       success: isSet(object.success) ? globalThis.Boolean(object.success) : false,
       message: isSet(object.message) ? globalThis.String(object.message) : "",
     };
   },
 
-  toJSON(message: SaveProjectUrlResponse): unknown {
+  toJSON(message: UpdateProjectStatusResponse): unknown {
     const obj: any = {};
     if (message.success !== false) {
       obj.success = message.success;
@@ -168,11 +207,11 @@ export const SaveProjectUrlResponse = {
     return obj;
   },
 
-  create<I extends Exact<DeepPartial<SaveProjectUrlResponse>, I>>(base?: I): SaveProjectUrlResponse {
-    return SaveProjectUrlResponse.fromPartial(base ?? ({} as any));
+  create<I extends Exact<DeepPartial<UpdateProjectStatusResponse>, I>>(base?: I): UpdateProjectStatusResponse {
+    return UpdateProjectStatusResponse.fromPartial(base ?? ({} as any));
   },
-  fromPartial<I extends Exact<DeepPartial<SaveProjectUrlResponse>, I>>(object: I): SaveProjectUrlResponse {
-    const message = createBaseSaveProjectUrlResponse();
+  fromPartial<I extends Exact<DeepPartial<UpdateProjectStatusResponse>, I>>(object: I): UpdateProjectStatusResponse {
+    const message = createBaseUpdateProjectStatusResponse();
     message.success = object.success ?? false;
     message.message = object.message ?? "";
     return message;
@@ -181,36 +220,38 @@ export const SaveProjectUrlResponse = {
 
 export type ProjectServiceService = typeof ProjectServiceService;
 export const ProjectServiceService = {
-  saveProjectUrl: {
-    path: "/project.ProjectService/SaveProjectUrl",
+  updateProjectStatus: {
+    path: "/project.ProjectService/UpdateProjectStatus",
     requestStream: false,
     responseStream: false,
-    requestSerialize: (value: SaveProjectUrlRequest) => Buffer.from(SaveProjectUrlRequest.encode(value).finish()),
-    requestDeserialize: (value: Buffer) => SaveProjectUrlRequest.decode(value),
-    responseSerialize: (value: SaveProjectUrlResponse) => Buffer.from(SaveProjectUrlResponse.encode(value).finish()),
-    responseDeserialize: (value: Buffer) => SaveProjectUrlResponse.decode(value),
+    requestSerialize: (value: UpdateProjectStatusRequest) =>
+      Buffer.from(UpdateProjectStatusRequest.encode(value).finish()),
+    requestDeserialize: (value: Buffer) => UpdateProjectStatusRequest.decode(value),
+    responseSerialize: (value: UpdateProjectStatusResponse) =>
+      Buffer.from(UpdateProjectStatusResponse.encode(value).finish()),
+    responseDeserialize: (value: Buffer) => UpdateProjectStatusResponse.decode(value),
   },
 } as const;
 
 export interface ProjectServiceServer extends UntypedServiceImplementation {
-  saveProjectUrl: handleUnaryCall<SaveProjectUrlRequest, SaveProjectUrlResponse>;
+  updateProjectStatus: handleUnaryCall<UpdateProjectStatusRequest, UpdateProjectStatusResponse>;
 }
 
 export interface ProjectServiceClient extends Client {
-  saveProjectUrl(
-    request: SaveProjectUrlRequest,
-    callback: (error: ServiceError | null, response: SaveProjectUrlResponse) => void,
+  updateProjectStatus(
+    request: UpdateProjectStatusRequest,
+    callback: (error: ServiceError | null, response: UpdateProjectStatusResponse) => void,
   ): ClientUnaryCall;
-  saveProjectUrl(
-    request: SaveProjectUrlRequest,
+  updateProjectStatus(
+    request: UpdateProjectStatusRequest,
     metadata: Metadata,
-    callback: (error: ServiceError | null, response: SaveProjectUrlResponse) => void,
+    callback: (error: ServiceError | null, response: UpdateProjectStatusResponse) => void,
   ): ClientUnaryCall;
-  saveProjectUrl(
-    request: SaveProjectUrlRequest,
+  updateProjectStatus(
+    request: UpdateProjectStatusRequest,
     metadata: Metadata,
     options: Partial<CallOptions>,
-    callback: (error: ServiceError | null, response: SaveProjectUrlResponse) => void,
+    callback: (error: ServiceError | null, response: UpdateProjectStatusResponse) => void,
   ): ClientUnaryCall;
 }
 

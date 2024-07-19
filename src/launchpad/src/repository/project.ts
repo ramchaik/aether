@@ -1,7 +1,7 @@
-import { db } from "../db";
+import { and, eq, sql } from "drizzle-orm";
 import slugify from "slugify";
+import { db } from "../db";
 import { Project } from "../db/schema";
-import { and, eq } from "drizzle-orm";
 const { nanoid } = require("nanoid");
 
 async function generateUniqueSlug(baseName: string): Promise<string> {
@@ -96,4 +96,33 @@ export async function readAllProjects(userId: string) {
     .from(Project)
     .where(eq(Project.userId, userId));
   return projects;
+}
+
+export type DBProjectStatus = "NOT_LIVE" | "LIVE" | "DEPLOYING";
+export async function updateStatusForProject(
+  projectId: string,
+  newStatus: DBProjectStatus
+) {
+  // First, check if the project exists and belongs to the user
+  const existingProject = await db
+    .select()
+    .from(Project)
+    .where(eq(Project.id, projectId));
+
+  if (existingProject.length === 0) {
+    throw new Error("Project not found");
+  }
+
+  // Update the project status
+  const updatedProject = await db
+    .update(Project)
+    .set({ status: newStatus, updatedAt: sql`now()` })
+    .where(eq(Project.id, projectId))
+    .returning();
+
+  if (updatedProject.length === 0) {
+    throw new Error("Failed to update project status");
+  }
+
+  return updatedProject[0];
 }
