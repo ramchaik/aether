@@ -9,6 +9,8 @@ import {
   Chip,
   Button,
   Tooltip,
+  Progress,
+  CircularProgress,
 } from "@nextui-org/react";
 import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
@@ -18,7 +20,7 @@ import {
   useFetchProject,
 } from "@/hooks/useProjectApi";
 import { Project } from "@/store/useProjectStore";
-import { useAuth } from "@clerk/nextjs";
+import { CheckIcon, ClockIcon } from "@heroicons/react/24/solid";
 import toast from "react-hot-toast";
 import Loader from "@/components/loader";
 import Error from "@/components/error";
@@ -55,6 +57,50 @@ const ProjectDetailPage: React.FC = () => {
   const deployProjectMutation = useDeployProject();
   const [isDeploying, setIsDeploying] = useState(false);
 
+  const StatusIndicator = ({ status }: { status: Project["status"] }) => {
+    switch (status) {
+      case "LIVE":
+        return (
+          <Chip
+            startContent={<CheckIcon className="w-4 h-4" />}
+            color="success"
+            variant="flat"
+          >
+            Deployed
+          </Chip>
+        );
+      case "NOT_LIVE":
+        return (
+          <Chip color="default" variant="flat">
+            Not Deployed
+          </Chip>
+        );
+      case "DEPLOYING":
+        return (
+          <Chip
+            startContent={
+              <div className="pr-1">
+                <CircularProgress
+                  size="sm"
+                  color="primary"
+                  aria-label="Deploying..."
+                  classNames={{
+                    svg: "w-4 h-4",
+                  }}
+                />
+              </div>
+            }
+            color="primary"
+            variant="flat"
+          >
+            Deploying
+          </Chip>
+        );
+      default:
+        return null;
+    }
+  };
+
   const handleRebuild = async () => {
     setIsDeploying(true);
     try {
@@ -78,11 +124,9 @@ const ProjectDetailPage: React.FC = () => {
         transition={{ duration: 0.5 }}
       >
         <Card className="mb-6">
-          <CardHeader className="flex justify-between items-center">
+          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <h1 className="text-2xl font-bold">{project.name}</h1>
-            {/* <Chip color={project.status === "Live" ? "success" : "warning"}>
-              {project.status}
-            </Chip> */}
+            <StatusIndicator status={project.status} />
           </CardHeader>
           <Divider />
           <CardBody>
@@ -122,23 +166,43 @@ const ProjectDetailPage: React.FC = () => {
               </div>
             </div>
             <div className="mt-4 flex space-x-2">
-              <Tooltip content="Visit the deployed site">
+              <Tooltip
+                content={
+                  project.status === "LIVE"
+                    ? "Visit the deployed site"
+                    : "Site not yet deployed"
+                }
+              >
                 <Button
                   color="primary"
                   as="a"
                   href={project.domain}
                   target="_blank"
+                  isDisabled={project.status !== "LIVE"}
                 >
                   Visit Site
                 </Button>
               </Tooltip>
-              <Tooltip content="Trigger a new build">
+              <Tooltip
+                content={
+                  isDeploying
+                    ? "Deployment in progress"
+                    : project.status === "LIVE"
+                    ? "Trigger a new build"
+                    : "Start initial build"
+                }
+              >
                 <Button
                   color="secondary"
                   onClick={handleRebuild}
                   isLoading={isDeploying}
+                  isDisabled={isDeploying || project.status === "DEPLOYING"}
                 >
-                  {isDeploying ? "Deploying..." : "Rebuild"}
+                  {isDeploying || project.status === "DEPLOYING"
+                    ? "Deploying..."
+                    : project.status === "LIVE"
+                    ? "Rebuild"
+                    : "Build"}
                 </Button>
               </Tooltip>
             </div>

@@ -11,6 +11,7 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   userId: string;
+  status: "LIVE" | "NOT_LIVE" | "DEPLOYING";
 }
 
 interface ProjectStore {
