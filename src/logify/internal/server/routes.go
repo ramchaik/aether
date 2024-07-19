@@ -14,6 +14,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
+	// TODO: remove
 	r.Get("/", s.HelloWorldHandler)
 
 	return r
