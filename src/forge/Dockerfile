@@ -8,23 +8,18 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker ./cmd/worker
 
-# Start a new stage from docker:dind
 FROM docker:dind
 
-# Create a directory for the application
 WORKDIR /app
 
-# Copy the Pre-built binary file from the previous stage
 COPY --from=builder /app/worker .
 COPY --from=builder /app/secure-build.dockerfile .
 COPY .env .
 
 ENV DOCKER_HOST=unix:///var/run/docker.sock
 
-# Expose port 8080 to the outside world
 EXPOSE 8080
 
-# Create a startup script
 COPY <<EOF /start.sh
 #!/bin/sh
 
