@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package project_log;
+
+option go_package = "./project_log";
+
+service ProjectLogService {
+  rpc PushLogs (PushLogsRequest) returns (PushLogsResponse) {}
+}
+
+message PushLogsRequest {
+  string project_id = 1;
+  repeated string logs = 2;
+}
+
+message PushLogsResponse {
+  bool success = 1;
+  string message = 2;
+}

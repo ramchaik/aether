@@ -2,6 +2,7 @@ package utils
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -127,54 +128,60 @@ func createDockerClient() (*client.Client, error) {
 }
 
 // BuildProject builds a project and returns the Docker client, build directory, and image name.
-func BuildProject(ctx context.Context, repoURL, buildCommand string) (*client.Client, string, string, error) {
+func BuildProject(ctx context.Context, repoURL, buildCommand string) (*client.Client, string, string, []string, error) {
 	uuid := uuid.New().String()
 	imageName := "aether-build-" + uuid
+	var projectLogs []string
 
 	currentDir, err := os.Getwd()
 	if err != nil {
-		return nil, "", "", fmt.Errorf("failed to get current directory: %w", err)
+		return nil, "", "", nil, fmt.Errorf("failed to get current directory: %w", err)
 	}
 
 	buildDir := filepath.Join(currentDir, "build-output")
 	if err := os.MkdirAll(buildDir, 0755); err != nil {
-		return nil, "", "", fmt.Errorf("failed to create build directory: %w", err)
+		return nil, "", "", nil, fmt.Errorf("failed to create build directory: %w", err)
 	}
 
 	dockerfilePath := filepath.Join(currentDir, "secure-build.dockerfile")
 
 	cli, err := createDockerClient()
 	if err != nil {
-		return nil, "", "", fmt.Errorf("failed to create Docker client: %w", err)
+		return nil, "", "", nil, fmt.Errorf("failed to create Docker client: %w", err)
 	}
 
 	buildResponse, err := buildImage(ctx, cli, dockerfilePath, repoURL, buildCommand, imageName)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("failed during image build: %w", err)
+		return nil, "", "", nil, fmt.Errorf("failed during image build: %w", err)
 	}
 	defer buildResponse.Close()
 
-	// Print build output
-	output, err := io.ReadAll(buildResponse)
-	if err != nil {
-		return nil, "", "", fmt.Errorf("failed to read build output: %w", err)
+	// Read and collect build output
+	scanner := bufio.NewScanner(buildResponse)
+	for scanner.Scan() {
+		line := scanner.Text()
+		projectLogs = append(projectLogs, line)
+		fmt.Println(line) // Still print to console for immediate feedback
 	}
-	fmt.Println("Build output:", string(output))
+
+	if err := scanner.Err(); err != nil {
+		return nil, "", "", projectLogs, fmt.Errorf("error reading build output: %w", err)
+	}
 
 	// Check if the image exists
 	_, _, err = cli.ImageInspectWithRaw(ctx, imageName)
 	if err != nil {
 		if client.IsErrNotFound(err) {
-			return nil, "", "", fmt.Errorf("built image not found: %s", imageName)
+			return nil, "", "", projectLogs, fmt.Errorf("built image not found: %s", imageName)
 		}
-		return nil, "", "", fmt.Errorf("failed to inspect image: %w", err)
+		return nil, "", "", projectLogs, fmt.Errorf("failed to inspect image: %w", err)
 	}
 
 	if err := copyBuildOutput(ctx, cli, imageName, currentDir); err != nil {
-		return nil, "", "", fmt.Errorf("failed to copy build output: %w", err)
+		return nil, "", "", projectLogs, fmt.Errorf("failed to copy build output: %w", err)
 	}
 
-	return cli, buildDir, imageName, nil
+	return cli, buildDir, imageName, projectLogs, nil
 }
 
 // Cleanup performs cleanup actions after a build project.

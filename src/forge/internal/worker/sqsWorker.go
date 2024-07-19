@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	pb "forge/internal/genprotobuf"
+	pb "forge/internal/genprotobuf/project"
 	"forge/internal/service"
 	"forge/internal/utils"
 	"log"
@@ -21,7 +21,12 @@ type Message struct {
 }
 
 // ProcessMessage takes a message and performs the necessary actions based on the message content.
-func ProcessMessage(message types.Message, workerType string, projectService service.ProjectService) bool {
+func ProcessMessage(
+	message types.Message,
+	workerType string,
+	projectService service.ProjectService,
+	logService service.ProjectLogService,
+) bool {
 	if message.Body == nil || message.MessageAttributes == nil {
 		log.Println("Invalid message received")
 		return false
@@ -47,11 +52,17 @@ func ProcessMessage(message types.Message, workerType string, projectService ser
 
 	ctx := context.Background()
 
-	cli, buildDir, imageName, err := utils.BuildProject(ctx, repoURL, buildCommand)
+	var projectLogs []string
+
+	cli, buildDir, imageName, projectLogs, err := utils.BuildProject(ctx, repoURL, buildCommand)
 	if err != nil {
 		log.Fatalf("Failed to build project: %v", err)
 	}
 
+	// Push the logs
+	logService.PushLogs(projectId, projectLogs)
+
+	// Deploying to S3
 	bucketName := os.Getenv("AWS_BUCKET_NAME")
 	prefix := fmt.Sprintf("projects/%s/build/", projectId)
 
@@ -68,12 +79,16 @@ func ProcessMessage(message types.Message, workerType string, projectService ser
 
 	// Update launchpad as the project is deployed
 	projectService.UpdateProjectStatus(projectId, pb.ProjectStatus_LIVE)
-
 	return true
 }
 
 // Run listens to an SQS queue and processes messages.
-func Run(queueURL string, workerType string, projectService service.ProjectService) {
+func Run(
+	queueURL string,
+	workerType string,
+	projectService service.ProjectService,
+	logService service.ProjectLogService,
+) {
 	sqsSvc, err := utils.GetSQSService()
 	if err != nil {
 		log.Fatalf("Failed to get SQS service %v", err)
@@ -94,7 +109,7 @@ func Run(queueURL string, workerType string, projectService service.ProjectServi
 		}
 
 		for _, message := range result.Messages {
-			messageStatus := ProcessMessage(message, workerType, projectService)
+			messageStatus := ProcessMessage(message, workerType, projectService, logService)
 			if !messageStatus {
 				log.Printf("Failed to process message [message id: %s]\n", *message.MessageId)
 				break

@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	pb "forge/internal/genprotobuf"
+	pb "forge/internal/genprotobuf/project"
 	"log"
 	"time"
 
@@ -15,6 +15,7 @@ type ProjectService interface {
 
 type project struct {
 	grpc *grpc.ClientConn
+	pb.UnimplementedProjectServiceServer
 }
 
 func NewProjectServiceClient(grpcConn *grpc.ClientConn) *project {

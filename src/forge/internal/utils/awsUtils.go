@@ -14,12 +14,10 @@ import (
 
 // getConfig retrieves AWS credentials and region from environment variables and returns a session.
 func getConfig() (*aws.Config, error) {
-	// Retrieve AWS credentials from environment variables
 	accessKeyID := os.Getenv("AWS_ACCESS_KEY_ID")
 	secretAccessKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
 	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
 
-	// Create a credentials object using the retrieved credentials
 	creds := credentials.NewStaticCredentialsProvider(
 		accessKeyID,
 		secretAccessKey,
