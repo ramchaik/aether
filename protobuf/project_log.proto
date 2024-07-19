@@ -10,7 +10,8 @@ service ProjectLogService {
 
 message PushLogsRequest {
   string project_id = 1;
-  repeated string logs = 2;
+  string log = 2;
+  int64 timestamp = 3;  // Epoch timestamp in seconds
 }
 
 message PushLogsResponse {
