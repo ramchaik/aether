@@ -2,9 +2,9 @@ package server
 
 import (
 	"context"
-	"log"
 
 	pb "logify/internal/genprotobuf/project_log"
+	"logify/internal/utils"
 
 	"google.golang.org/grpc"
 )
@@ -14,12 +14,18 @@ type grpcServer struct {
 }
 
 func (s *grpcServer) PushLogs(ctx context.Context, req *pb.PushLogsRequest) (*pb.PushLogsResponse, error) {
-	pId := req.ProjectId
-	logs := req.Logs
-	log.Println("Adding logs for pId: ", pId, " logs: ", logs)
+
+	data := map[string]any{
+		"projectId": req.ProjectId,
+		"log":       req.Log,
+		"timestamp": req.Timestamp,
+	}
+
+	utils.PushDataToKinesisStream(data)
+
 	return &pb.PushLogsResponse{
 		Success: true,
-		Message: "Logs pushed successfully",
+		Message: "Log pushed successfully",
 	}, nil
 }
 

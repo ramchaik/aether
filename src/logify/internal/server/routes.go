@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"log"
+	"logify/internal/utils"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -21,6 +22,11 @@ func (s *Server) RegisterRoutes() http.Handler {
 func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 	resp := make(map[string]string)
 	resp["message"] = "Hello World"
+
+	data := map[string]any{
+		"message": "Hello!",
+	}
+	utils.PushDataToKinesisStream(data)
 
 	jsonResp, err := json.Marshal(resp)
 	if err != nil {
