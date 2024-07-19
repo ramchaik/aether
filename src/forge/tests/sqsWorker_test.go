@@ -5,6 +5,8 @@ import (
 	"log"
 	"testing"
 
+	pb "forge/internal/genprotobuf"
+
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
@@ -18,8 +20,8 @@ type MockGrpcClient struct {
 	conn string
 }
 
-func (g *MockGrpcClient) SaveProjectURL(url string, projectId string) {
-	log.Println("url: ", url, " projectId: ", projectId)
+func (g *MockGrpcClient) UpdateProjectStatus(projectId string, status pb.ProjectStatus) {
+	log.Println("projectId: ", projectId, " status", status)
 }
 
 func TestProcessMessage(t *testing.T) {

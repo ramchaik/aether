@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	pb "forge/internal/proto"
+	pb "forge/internal/genprotobuf"
 	"log"
 	"time"
 
@@ -10,7 +10,7 @@ import (
 )
 
 type ProjectService interface {
-	SaveProjectURL(url string, projectId string)
+	UpdateProjectStatus(projectId string, status pb.ProjectStatus)
 }
 
 type project struct {
@@ -23,15 +23,18 @@ func NewProjectServiceClient(grpcConn *grpc.ClientConn) *project {
 	}
 }
 
-func (p *project) SaveProjectURL(url string, projectId string) {
+func (p *project) UpdateProjectStatus(projectId string, status pb.ProjectStatus) {
 	c := pb.NewProjectServiceClient(p.grpc)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	r, err := c.SaveProjectUrl(ctx, &pb.SaveProjectUrlRequest{ProjectUrl: url, ProjectId: projectId})
+	r, err := c.UpdateProjectStatus(ctx, &pb.UpdateProjectStatusRequest{
+		ProjectId: projectId,
+		Status:    status,
+	})
 	if err != nil {
-		log.Fatalf("could not save project: %v", err)
+		log.Fatalf("could not update project status: %v", err)
 	}
 
 	log.Printf("Response: %s", r.GetMessage())

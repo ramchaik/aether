@@ -5,15 +5,21 @@ package project;
 option go_package = "./project";
 
 service ProjectService {
-  rpc SaveProjectUrl (SaveProjectUrlRequest) returns (SaveProjectUrlResponse) {}
+  rpc UpdateProjectStatus (UpdateProjectStatusRequest) returns (UpdateProjectStatusResponse) {}
 }
 
-message SaveProjectUrlRequest {
-  string project_url = 1;
-  string project_id = 2;
+enum ProjectStatus {
+  NOT_LIVE = 0;
+  LIVE = 1;
+  DEPLOYING = 2;
 }
 
-message SaveProjectUrlResponse {
+message UpdateProjectStatusRequest {
+  string project_id = 1;
+  ProjectStatus status = 2;
+}
+
+message UpdateProjectStatusResponse {
   bool success = 1;
   string message = 2;
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	pb "forge/internal/genprotobuf"
 	"forge/internal/service"
 	"forge/internal/utils"
 	"log"
@@ -65,12 +66,8 @@ func ProcessMessage(message types.Message, workerType string, projectService ser
 
 	utils.Cleanup(ctx, cli, buildDir, imageName)
 
-	// Sample url
-	// https://<bucket-name>.s3.amazonaws.com/projects/<projectId>/build/index.html
-	projectURL := fmt.Sprintf("https://%s.s3.amazonaws.com/%sindex.html", bucketName, prefix)
-
-	// Call launchpad
-	projectService.SaveProjectURL(projectURL, projectId)
+	// Update launchpad as the project is deployed
+	projectService.UpdateProjectStatus(projectId, pb.ProjectStatus_LIVE)
 
 	return true
 }
@@ -88,8 +85,8 @@ func Run(queueURL string, workerType string, projectService service.ProjectServi
 		result, err := sqsSvc.ReceiveMessage(context.TODO(), &sqs.ReceiveMessageInput{
 			QueueUrl:              &queueURL,
 			MaxNumberOfMessages:   10,
-			VisibilityTimeout:     20,
-			WaitTimeSeconds:       0,
+			VisibilityTimeout:     300,
+			WaitTimeSeconds:       20,
 			MessageAttributeNames: []string{"All"},
 		})
 		if err != nil {

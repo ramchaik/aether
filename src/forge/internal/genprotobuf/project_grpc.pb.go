@@ -22,7 +22,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ProjectServiceClient interface {
-	SaveProjectUrl(ctx context.Context, in *SaveProjectUrlRequest, opts ...grpc.CallOption) (*SaveProjectUrlResponse, error)
+	UpdateProjectStatus(ctx context.Context, in *UpdateProjectStatusRequest, opts ...grpc.CallOption) (*UpdateProjectStatusResponse, error)
 }
 
 type projectServiceClient struct {
@@ -33,9 +33,9 @@ func NewProjectServiceClient(cc grpc.ClientConnInterface) ProjectServiceClient {
 	return &projectServiceClient{cc}
 }
 
-func (c *projectServiceClient) SaveProjectUrl(ctx context.Context, in *SaveProjectUrlRequest, opts ...grpc.CallOption) (*SaveProjectUrlResponse, error) {
-	out := new(SaveProjectUrlResponse)
-	err := c.cc.Invoke(ctx, "/project.ProjectService/SaveProjectUrl", in, out, opts...)
+func (c *projectServiceClient) UpdateProjectStatus(ctx context.Context, in *UpdateProjectStatusRequest, opts ...grpc.CallOption) (*UpdateProjectStatusResponse, error) {
+	out := new(UpdateProjectStatusResponse)
+	err := c.cc.Invoke(ctx, "/project.ProjectService/UpdateProjectStatus", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (c *projectServiceClient) SaveProjectUrl(ctx context.Context, in *SaveProje
 // All implementations must embed UnimplementedProjectServiceServer
 // for forward compatibility
 type ProjectServiceServer interface {
-	SaveProjectUrl(context.Context, *SaveProjectUrlRequest) (*SaveProjectUrlResponse, error)
+	UpdateProjectStatus(context.Context, *UpdateProjectStatusRequest) (*UpdateProjectStatusResponse, error)
 	mustEmbedUnimplementedProjectServiceServer()
 }
 
@@ -54,8 +54,8 @@ type ProjectServiceServer interface {
 type UnimplementedProjectServiceServer struct {
 }
 
-func (UnimplementedProjectServiceServer) SaveProjectUrl(context.Context, *SaveProjectUrlRequest) (*SaveProjectUrlResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SaveProjectUrl not implemented")
+func (UnimplementedProjectServiceServer) UpdateProjectStatus(context.Context, *UpdateProjectStatusRequest) (*UpdateProjectStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateProjectStatus not implemented")
 }
 func (UnimplementedProjectServiceServer) mustEmbedUnimplementedProjectServiceServer() {}
 
@@ -70,20 +70,20 @@ func RegisterProjectServiceServer(s grpc.ServiceRegistrar, srv ProjectServiceSer
 	s.RegisterService(&ProjectService_ServiceDesc, srv)
 }
 
-func _ProjectService_SaveProjectUrl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SaveProjectUrlRequest)
+func _ProjectService_UpdateProjectStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateProjectStatusRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ProjectServiceServer).SaveProjectUrl(ctx, in)
+		return srv.(ProjectServiceServer).UpdateProjectStatus(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/project.ProjectService/SaveProjectUrl",
+		FullMethod: "/project.ProjectService/UpdateProjectStatus",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ProjectServiceServer).SaveProjectUrl(ctx, req.(*SaveProjectUrlRequest))
+		return srv.(ProjectServiceServer).UpdateProjectStatus(ctx, req.(*UpdateProjectStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -96,8 +96,8 @@ var ProjectService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ProjectServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SaveProjectUrl",
-			Handler:    _ProjectService_SaveProjectUrl_Handler,
+			MethodName: "UpdateProjectStatus",
+			Handler:    _ProjectService_UpdateProjectStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

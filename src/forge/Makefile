@@ -1,5 +1,5 @@
 PROTO_DIR=../../protobuf
-GO_OUT_DIR=./internal/proto
+GO_OUT_DIR=./internal/genprotobuf
 
 # Build the application
 all: build
@@ -58,7 +58,7 @@ watch:
 	    fi; \
 	fi
 
-generate-proto:
+generate-protobuf:
 	protoc -I=$(PROTO_DIR) --go_out=$(GO_OUT_DIR) --go_opt=paths=source_relative \
 		--go-grpc_out=$(GO_OUT_DIR) --go-grpc_opt=paths=source_relative \
 		$(PROTO_DIR)/*.proto
