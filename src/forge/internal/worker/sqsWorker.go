@@ -52,15 +52,15 @@ func ProcessMessage(
 
 	ctx := context.Background()
 
-	var projectLogs []string
+	// Pushes the logs to log service
+	pushLogs := func(logMessage string) {
+		logService.PushLogs(projectId, logMessage)
+	}
 
-	cli, buildDir, imageName, projectLogs, err := utils.BuildProject(ctx, repoURL, buildCommand)
+	cli, buildDir, imageName, err := utils.BuildProject(ctx, repoURL, buildCommand, pushLogs)
 	if err != nil {
 		log.Fatalf("Failed to build project: %v", err)
 	}
-
-	// Push the logs
-	logService.PushLogs(projectId, projectLogs)
 
 	// Deploying to S3
 	bucketName := os.Getenv("AWS_BUCKET_NAME")

@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	pb "forge/internal/genprotobuf/project_log" // Adjust the import path as necessary
+	pb "forge/internal/genprotobuf/project_log"
 	"log"
 	"time"
 
@@ -10,7 +10,7 @@ import (
 )
 
 type ProjectLogService interface {
-	PushLogs(projectId string, logs []string) (bool, string)
+	PushLogs(projectId string, logs string) (bool, string)
 }
 
 type projectLog struct {
@@ -24,7 +24,7 @@ func NewProjectLogServiceClient(grpcConn *grpc.ClientConn) *projectLog {
 	}
 }
 
-func (p *projectLog) PushLogs(projectId string, logs []string) (bool, string) {
+func (p *projectLog) PushLogs(projectId string, buildLog string) (bool, string) {
 	c := pb.NewProjectLogServiceClient(p.grpc)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -32,7 +32,8 @@ func (p *projectLog) PushLogs(projectId string, logs []string) (bool, string) {
 
 	req := &pb.PushLogsRequest{
 		ProjectId: projectId,
-		Logs:      logs,
+		Log:       buildLog,
+		Timestamp: time.Now().Unix(), // Current time as Unix timestamp (seconds since epoch)
 	}
 
 	r, err := c.PushLogs(ctx, req)
