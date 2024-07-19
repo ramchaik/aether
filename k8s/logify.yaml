@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: logify-deployment
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: logify
@@ -16,7 +16,8 @@ spec:
         - name: logify-container
           image: vsramchaik/aether-logify:latest
           ports:
-            - containerPort: 8080
+            - containerPort: 8000 # HTTP server
+            - containerPort: 50051 # gRPC
           resources:
             requests:
               cpu: "250m"
@@ -25,24 +26,12 @@ spec:
               cpu: "500m"
               memory: "1Gi"
           env:
-            - name: DB_USERNAME
-              value: vaibhav
-            - name: DB_PASSWORD
-              value: vaibhav
-            - name: DB_HOST
-              value: postgres
-            - name: DB_PORT
-              value: "5432"
-            - name: DB_DATABASE
-              value: aether
-            - name: AWS_BUCKET_NAME
-              value: aether-projects
-            - name: AWS_REGION
-              value: us-east-1
             - name: PORT
               value: "8080"
             - name: APP_ENV
               value: local
+            - name: GRPC_SERVER_ADDRESS
+              value: "0.0.0.0:50051"
 ---
 apiVersion: v1
 kind: Service
@@ -55,4 +44,8 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 8080
-  type: ClusterIP
+    - name: grpc
+      protocol: TCP
+      port: 50051
+      targetPort: 50051
+  type: LoadBalancer
