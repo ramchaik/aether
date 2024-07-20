@@ -9,6 +9,7 @@ import (
 	"forge/internal/utils"
 	"log"
 	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
@@ -52,15 +53,23 @@ func ProcessMessage(
 
 	ctx := context.Background()
 
-	// Pushes the logs to log service
+	// Maintain array of log entries
+	var logEntries []service.LogEntry
 	pushLogs := func(logMessage string) {
-		logService.PushLogs(projectId, logMessage)
+		logEntry := service.LogEntry{
+			Log:       logMessage,
+			Timestamp: time.Now().Unix(),
+		}
+		logEntries = append(logEntries, logEntry)
 	}
 
 	cli, buildDir, imageName, err := utils.BuildProject(ctx, repoURL, buildCommand, pushLogs)
 	if err != nil {
 		log.Fatalf("Failed to build project: %v", err)
 	}
+
+	// Push all the logs
+	logService.PushLogs(projectId, logEntries)
 
 	// Deploying to S3
 	bucketName := os.Getenv("AWS_BUCKET_NAME")

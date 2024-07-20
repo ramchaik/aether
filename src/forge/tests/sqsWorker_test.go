@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"forge/internal/service"
 	"forge/internal/worker"
 	"log"
 	"testing"
@@ -28,8 +29,8 @@ type MockGrpcClient2 struct {
 	conn string
 }
 
-func (g *MockGrpcClient2) PushLogs(projectId string, buildLog string) (bool, string) {
-	log.Println("projectId: ", projectId, " logs", buildLog)
+func (g *MockGrpcClient2) PushLogs(projectId string, buildLogs []service.LogEntry) (bool, string) {
+	log.Println("projectId: ", projectId)
 	return true, "success"
 }
 func TestProcessMessage(t *testing.T) {

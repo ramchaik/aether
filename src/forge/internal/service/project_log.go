@@ -10,7 +10,12 @@ import (
 )
 
 type ProjectLogService interface {
-	PushLogs(projectId string, logs string) (bool, string)
+	PushLogs(projectId string, logs []LogEntry) (bool, string)
+}
+
+type LogEntry struct {
+	Log       string
+	Timestamp int64
 }
 
 type projectLog struct {
@@ -24,24 +29,30 @@ func NewProjectLogServiceClient(grpcConn *grpc.ClientConn) *projectLog {
 	}
 }
 
-func (p *projectLog) PushLogs(projectId string, buildLog string) (bool, string) {
+func (p *projectLog) PushLogs(projectId string, logs []LogEntry) (bool, string) {
 	c := pb.NewProjectLogServiceClient(p.grpc)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
+	pbLogs := make([]*pb.LogEntry, len(logs))
+	for i, entry := range logs {
+		pbLogs[i] = &pb.LogEntry{
+			Log:       entry.Log,
+			Timestamp: entry.Timestamp,
+		}
+	}
+
 	req := &pb.PushLogsRequest{
 		ProjectId: projectId,
-		Log:       buildLog,
-		Timestamp: time.Now().Unix(), // Current time as Unix timestamp (seconds since epoch)
+		Logs:      pbLogs,
 	}
 
 	r, err := c.PushLogs(ctx, req)
 	if err != nil {
-		log.Fatalf("could not push logs: %v", err)
+		log.Printf("could not push logs: %v", err)
 		return false, "Failed to push logs"
 	}
 
-	log.Printf("Response: %s", r.GetMessage())
-	return r.Success, r.Message
+	return r.GetSuccess(), r.GetMessage()
 }
