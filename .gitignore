@@ -203,3 +203,5 @@ dist
 .idea/
 *.swp
 *.swo
+
+k8s/aws-credentials-secret.yaml
