@@ -23,11 +23,11 @@ spec:
               memory: 500Mi
               cpu: 250m
             limits:
-              memory: 1Gi
+              memory: 750Mi
               cpu: 500m
           env:
             - name: DATABASE_URL
-              value: "postgresql://vaibhav:vaibhav@postgres:5432/aether"
+              value: "postgresql://vaibhavadmin:vaibhavadmin@main-db.ctnalk0fsjpr.us-east-1.rds.amazonaws.com:5432/aether?sslmode=disable"
             - name: GRPC_SERVER_ADDRESS
               value: "0.0.0.0:50051"
             - name: PROXY_SVC
@@ -37,24 +37,14 @@ spec:
           image: vsramchaik/aether-launchpad:latest
           env:
             - name: DATABASE_URL
-              value: "postgresql://vaibhav:vaibhav@postgres:5432/aether"
+              value: "postgresql://vaibhavadmin:vaibhavadmin@main-db.ctnalk0fsjpr.us-east-1.rds.amazonaws.com:5432/aether?sslmode=disable"
           command:
             - "sh"
             - "-c"
             - |
-              apt-get update && apt-get install -y netcat-openbsd
+              pnpm run migrate
+              echo "Drizzle migrations applied successfully."
 
-              cp /scripts/run-migrations.sh /app/
-              chmod +x /app/run-migrations.sh
-
-              cd /app && ./run-migrations.sh
-          volumeMounts:
-            - name: drizzle-scripts
-              mountPath: /scripts
-      volumes:
-        - name: drizzle-scripts
-          configMap:
-            name: drizzle-scripts
 ---
 apiVersion: v1
 kind: Service
@@ -64,7 +54,8 @@ spec:
   selector:
     app: launchpad-app
   ports:
-    - protocol: TCP
+    - name: http
+      protocol: TCP
       port: 80
       targetPort: 8000
     - name: grpc
