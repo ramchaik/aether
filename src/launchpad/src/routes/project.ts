@@ -80,7 +80,7 @@ async function readProjectHandler(
 
     // TODO: fix this when saving project
     // Update domain
-    project.domain = `http://${project.id}.${PROXY_SVC}`;
+    project.domain = `http://${PROXY_SVC}/${project.id}`;
 
     reply.code(HTTP_CODES.OK).send(project);
   } catch (error) {
