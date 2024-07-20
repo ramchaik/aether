@@ -26,6 +26,16 @@ resource "aws_subnet" "public" {
   }
 }
 
+resource "aws_subnet" "private" {
+  count             = 2
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = element(["10.1.3.0/24", "10.1.4.0/24"], count.index)
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+  tags = {
+    Name = "private-subnet-${count.index + 1}"
+  }
+}
+
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 }
@@ -44,6 +54,29 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+resource "aws_eip" "nat" {
+  domain = "vpc"
+}
+
+resource "aws_nat_gateway" "main" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public[0].id
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.main.id
+  }
+}
+
+resource "aws_route_table_association" "private" {
+  count          = 2
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private.id
+}
+
 resource "aws_eks_cluster" "main" {
   name     = "main-cluster"
   role_arn = var.eks_role_arn
@@ -57,21 +90,47 @@ resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "main-node-group"
   node_role_arn   = var.node_role_arn
-  subnet_ids      = aws_subnet.public[*].id
+  subnet_ids      = concat(aws_subnet.public[*].id, aws_subnet.private[*].id)
   scaling_config {
     desired_size = 1
     max_size     = 1
     min_size     = 1
   }
-  instance_types = ["t3.small", "t3a.small", "t3.medium", "t3a.medium"]
+  instance_types = ["t3.medium", "t3a.medium"] #"t3.small", "t3a.small",
   capacity_type  = "SPOT"
+  disk_size      = 20
   depends_on     = [aws_eks_cluster.main]
 }
 
 
+resource "aws_db_parameter_group" "custom_pg" {
+  family = "postgres15"
+  name   = "custom-pg-hba-conf"
+
+  parameter {
+    name  = "rds.force_ssl"
+    value = "0"
+  }
+
+  parameter {
+    name  = "log_connections"
+    value = "1"
+  }
+
+  parameter {
+    name  = "log_hostname"
+    value = "1"
+  }
+
+  parameter {
+    name  = "pgaudit.log"
+    value = "all"
+  }
+}
+
 resource "aws_db_subnet_group" "main" {
   name       = "main"
-  subnet_ids = aws_subnet.public[*].id
+  subnet_ids = aws_subnet.private[*].id
 }
 
 resource "aws_security_group" "rds" {
@@ -80,11 +139,11 @@ resource "aws_security_group" "rds" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description = "Allow inbound from EKS"
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    description     = "Allow inbound from EKS"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_eks_cluster.main.vpc_config[0].cluster_security_group_id]
   }
 
   egress {
@@ -105,7 +164,7 @@ resource "aws_db_instance" "main" {
   db_name              = "aether"
   username             = var.db_username
   password             = var.db_password
-  parameter_group_name = "default.postgres15"
+  parameter_group_name = aws_db_parameter_group.custom_pg.name
   skip_final_snapshot  = true
 
   vpc_security_group_ids = [aws_security_group.rds.id]
@@ -150,6 +209,28 @@ resource "aws_s3_bucket_public_access_block" "aether" {
   restrict_public_buckets = false
 }
 
+resource "aws_s3_bucket" "private_bucket" {
+  bucket = var.private_s3_bucket_name
+
+  tags = {
+    Name = var.private_s3_bucket_name
+  }
+}
+
+resource "aws_s3_bucket_acl" "private_bucket_acl" {
+  bucket = aws_s3_bucket.private_bucket.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_public_access_block" "private_bucket" {
+  bucket = aws_s3_bucket.private_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
 resource "aws_sqs_queue" "aether" {
   name = var.sqs_queue_name
 }
@@ -162,26 +243,16 @@ resource "aws_ecr_repository" "aether" {
   }
 }
 
-output "endpoint" {
-  value = aws_eks_cluster.main.endpoint
-}
+resource "aws_kinesis_stream" "aether" {
+  name             = var.kinesis_stream_name
+  shard_count      = 1
+  retention_period = 24
 
-output "kubeconfig-certificate-authority-data" {
-  value = aws_eks_cluster.main.certificate_authority[0].data
-}
+  stream_mode_details {
+    stream_mode = "PROVISIONED"
+  }
 
-output "rds_endpoint" {
-  value = aws_db_instance.main.endpoint
-}
-
-output "s3_bucket_name" {
-  value = aws_s3_bucket.aether.bucket
-}
-
-output "sqs_queue_url" {
-  value = aws_sqs_queue.aether.url
-}
-
-output "ecr_repository_url" {
-  value = aws_ecr_repository.aether.repository_url
+  tags = {
+    Name = var.kinesis_stream_name
+  }
 }
