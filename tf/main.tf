@@ -13,6 +13,9 @@ resource "aws_vpc" "main" {
   tags = {
     Name = "main-vpc"
   }
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_subnet" "public" {
@@ -24,6 +27,9 @@ resource "aws_subnet" "public" {
   tags = {
     Name = "public-subnet-${count.index + 1}"
   }
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_subnet" "private" {
@@ -33,6 +39,9 @@ resource "aws_subnet" "private" {
   availability_zone = data.aws_availability_zones.available.names[count.index]
   tags = {
     Name = "private-subnet-${count.index + 1}"
+  }
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
@@ -56,6 +65,9 @@ resource "aws_route_table_association" "public" {
 
 resource "aws_eip" "nat" {
   domain = "vpc"
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_nat_gateway" "main" {
@@ -100,6 +112,52 @@ resource "aws_eks_node_group" "main" {
   capacity_type  = "SPOT"
   disk_size      = 20
   depends_on     = [aws_eks_cluster.main]
+}
+
+resource "null_resource" "delete_eks_resources" {
+  triggers = {
+    cluster_name = aws_eks_cluster.main.name
+    region       = var.region
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      aws eks update-kubeconfig --name ${self.triggers.cluster_name} --region ${self.triggers.region}
+      kubectl delete services --all
+      kubectl delete deployments --all
+      kubectl delete pods --all
+      kubectl delete daemonsets --all
+      sleep 60  # Wait for resources to be deleted
+    EOT
+  }
+
+  depends_on = [aws_eks_node_group.main]
+}
+
+resource "null_resource" "cleanup_resources" {
+  triggers = {
+    vpc_id         = aws_vpc.main.id
+    nat_eip_id     = aws_eip.nat.id
+    s3_bucket_name = aws_s3_bucket.aether.id
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      # Release Elastic IP
+      aws ec2 release-address --allocation-id ${self.triggers.nat_eip_id}
+
+      # Delete all resources in the VPC
+      aws ec2 describe-instances --filters "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'Reservations[].Instances[].InstanceId' --output text | xargs -r aws ec2 terminate-instances --instance-ids
+      aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'NatGateways[].NatGatewayId' --output text | xargs -r -n1 aws ec2 delete-nat-gateway --nat-gateway-id
+      aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'NetworkInterfaces[].NetworkInterfaceId' --output text | xargs -r -n1 aws ec2 delete-network-interface --network-interface-id
+
+      # Wait for resources to be deleted
+      sleep 300
+    EOT
+  }
+  depends_on = [null_resource.delete_eks_resources]
 }
 
 
@@ -177,7 +235,8 @@ resource "aws_db_instance" "main" {
 
 
 resource "aws_s3_bucket" "aether" {
-  bucket = var.s3_bucket_name
+  bucket        = var.s3_bucket_name
+  force_destroy = true
   tags = {
     Name = var.s3_bucket_name
   }
@@ -211,6 +270,7 @@ resource "aws_s3_bucket_public_access_block" "aether" {
 
 resource "aws_s3_bucket" "private_bucket" {
   bucket = var.private_s3_bucket_name
+  force_destroy = true
 
   tags = {
     Name = var.private_s3_bucket_name
