@@ -11,8 +11,11 @@ import (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
+	appEnv := os.Getenv("APP_ENV")
+	if appEnv == "local" {
+		if err := godotenv.Load(); err != nil {
+			log.Println("No .env file found")
+		}
 	}
 
 	GRPC_SERVER_ADDRESS := os.Getenv("GRPC_SERVER_ADDRESS")

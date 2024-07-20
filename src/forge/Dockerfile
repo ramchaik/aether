@@ -14,7 +14,6 @@ WORKDIR /app
 
 COPY --from=builder /app/worker .
 COPY --from=builder /app/secure-build.dockerfile .
-COPY .env .
 
 ENV DOCKER_HOST=unix:///var/run/docker.sock
 

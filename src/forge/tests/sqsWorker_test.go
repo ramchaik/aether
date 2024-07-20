@@ -28,8 +28,8 @@ type MockGrpcClient2 struct {
 	conn string
 }
 
-func (g *MockGrpcClient2) PushLogs(projectId string, logs []string) (bool, string) {
-	log.Println("projectId: ", projectId, " logs", logs)
+func (g *MockGrpcClient2) PushLogs(projectId string, buildLog string) (bool, string) {
+	log.Println("projectId: ", projectId, " logs", buildLog)
 	return true, "success"
 }
 func TestProcessMessage(t *testing.T) {
