@@ -1,3 +1,40 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: launchpad-sa
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: service-reader
+rules:
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: read-services
+subjects:
+  - kind: ServiceAccount
+    name: launchpad-sa
+roleRef:
+  kind: Role
+  name: service-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proxy-ip-config
+data:
+  PROXY_IP: ""
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -12,6 +49,7 @@ spec:
       labels:
         app: launchpad-app
     spec:
+      serviceAccountName: launchpad-sa
       initContainers:
         - name: migrate-db
           image: vsramchaik/aether-launchpad:latest
@@ -30,12 +68,28 @@ spec:
             - "sh"
             - "-c"
             - |
-              PROXY_IP=$(kubectl get svc proxy-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+              echo "Starting fetch-proxy-ip init container"
+              PROXY_IP=$(kubectl get svc proxy-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+              echo "Initial PROXY_IP value: $PROXY_IP"
+
+              ATTEMPT=1
               while [ -z "$PROXY_IP" ]; do
+                echo "Attempt $ATTEMPT: PROXY_IP is empty, waiting 5 seconds before retry"
                 sleep 5
-                PROXY_IP=$(kubectl get svc proxy-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                PROXY_IP=$(kubectl get svc proxy-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+                echo "Attempt $ATTEMPT: New PROXY_IP value: $PROXY_IP"
+                ATTEMPT=$((ATTEMPT+1))
               done
+
+              echo "PROXY_IP found: $PROXY_IP"
+              echo "Creating/updating ConfigMap proxy-ip-config"
               kubectl create configmap proxy-ip-config --from-literal=PROXY_IP=$PROXY_IP -o yaml --dry-run=client | kubectl apply -f -
+
+              echo "ConfigMap creation/update command executed"
+              echo "Verifying ConfigMap content:"
+              kubectl get configmap proxy-ip-config -o yaml
+
+              echo "fetch-proxy-ip init container completed"
       containers:
         - name: launchpad-app-container
           image: vsramchaik/aether-launchpad:latest
@@ -59,6 +113,21 @@ spec:
                 configMapKeyRef:
                   name: proxy-ip-config
                   key: PROXY_IP
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_SESSION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: AWS_SESSION_TOKEN
 
 ---
 apiVersion: v1
@@ -78,10 +147,3 @@ spec:
       port: 50051
       targetPort: 50051
   type: ClusterIP
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: proxy-ip-config
-data:
-  PROXY_IP: ""

@@ -29,9 +29,30 @@ spec:
             - name: PORT
               value: "8080"
             - name: APP_ENV
-              value: local
+              value: prod
+            - name: AWS_REGION
+              value: us-east-1
+            - name: AWS_KINESIS_STREAM
+              value: aether-logs-stream
+            - name: AWS_KINESIS_STREAM_PARTITION_KEY
+              value: aether-build-logs
             - name: GRPC_SERVER_ADDRESS
               value: "0.0.0.0:50051"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_SESSION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: AWS_SESSION_TOKEN
 ---
 apiVersion: v1
 kind: Service
@@ -49,4 +70,4 @@ spec:
       protocol: TCP
       port: 50051
       targetPort: 50051
-  type: LoadBalancer
+  type: ClusterIP
