@@ -12,6 +12,30 @@ spec:
       labels:
         app: launchpad-app
     spec:
+      initContainers:
+        - name: migrate-db
+          image: vsramchaik/aether-launchpad:latest
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://vaibhavadmin:vaibhavadmin@main-db.ctnalk0fsjpr.us-east-1.rds.amazonaws.com:5432/aether?sslmode=disable"
+          command:
+            - "sh"
+            - "-c"
+            - |
+              pnpm run migrate
+              echo "Drizzle migrations applied successfully."
+        - name: fetch-proxy-ip
+          image: bitnami/kubectl:latest
+          command:
+            - "sh"
+            - "-c"
+            - |
+              PROXY_IP=$(kubectl get svc proxy-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+              while [ -z "$PROXY_IP" ]; do
+                sleep 5
+                PROXY_IP=$(kubectl get svc proxy-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+              done
+              kubectl create configmap proxy-ip-config --from-literal=PROXY_IP=$PROXY_IP -o yaml --dry-run=client | kubectl apply -f -
       containers:
         - name: launchpad-app-container
           image: vsramchaik/aether-launchpad:latest
@@ -31,19 +55,10 @@ spec:
             - name: GRPC_SERVER_ADDRESS
               value: "0.0.0.0:50051"
             - name: PROXY_SVC
-              value: "proxy-service"
-      initContainers:
-        - name: migrate
-          image: vsramchaik/aether-launchpad:latest
-          env:
-            - name: DATABASE_URL
-              value: "postgresql://vaibhavadmin:vaibhavadmin@main-db.ctnalk0fsjpr.us-east-1.rds.amazonaws.com:5432/aether?sslmode=disable"
-          command:
-            - "sh"
-            - "-c"
-            - |
-              pnpm run migrate
-              echo "Drizzle migrations applied successfully."
+              valueFrom:
+                configMapKeyRef:
+                  name: proxy-ip-config
+                  key: PROXY_IP
 
 ---
 apiVersion: v1
@@ -63,3 +78,10 @@ spec:
       port: 50051
       targetPort: 50051
   type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: proxy-ip-config
+data:
+  PROXY_IP: ""
