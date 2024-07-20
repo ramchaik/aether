@@ -8,10 +8,14 @@ service ProjectLogService {
   rpc PushLogs (PushLogsRequest) returns (PushLogsResponse) {}
 }
 
+message LogEntry {
+  string log = 1;
+  int64 timestamp = 2;  // Unix timestamp
+}
+
 message PushLogsRequest {
   string project_id = 1;
-  string log = 2;
-  int64 timestamp = 3;  // Epoch timestamp in seconds
+  repeated LogEntry logs = 2;
 }
 
 message PushLogsResponse {
