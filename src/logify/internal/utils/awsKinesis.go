@@ -29,13 +29,14 @@ func GetKinesisClient() *kinesis.Client {
 	return client
 }
 
-func PushDataToKinesisStream(data map[string]any) {
+func PushDataToKinesisStream(data map[string]any) error {
 	client := GetKinesisClient()
 
 	streamName := os.Getenv("AWS_KINESIS_STREAM")
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		log.Fatalf("failed to marshal data: %v", err)
+		return err
 	}
 
 	partitionKey := os.Getenv("AWS_KINESIS_STREAM_PARTITION_KEY")
@@ -48,8 +49,11 @@ func PushDataToKinesisStream(data map[string]any) {
 	result, err := client.PutRecord(context.TODO(), input)
 	if err != nil {
 		log.Fatalf("failed to put record to Kinesis: %v", err)
+		return err
 	}
 
 	fmt.Printf("Successfully put logs record to Kinesis. Shard ID: %s, Sequence number: %s\n",
 		*result.ShardId, *result.SequenceNumber)
+
+	return nil
 }

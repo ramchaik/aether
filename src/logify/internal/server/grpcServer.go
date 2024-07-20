@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"log"
 
 	pb "logify/internal/genprotobuf/project_log"
 	"logify/internal/utils"
@@ -14,18 +15,26 @@ type grpcServer struct {
 }
 
 func (s *grpcServer) PushLogs(ctx context.Context, req *pb.PushLogsRequest) (*pb.PushLogsResponse, error) {
+	for _, logEntry := range req.Logs {
+		data := map[string]any{
+			"projectId": req.ProjectId,
+			"log":       logEntry.Log,
+			"timestamp": logEntry.Timestamp,
+		}
 
-	data := map[string]any{
-		"projectId": req.ProjectId,
-		"log":       req.Log,
-		"timestamp": req.Timestamp,
+		err := utils.PushDataToKinesisStream(data)
+		if err != nil {
+			log.Printf("Failed to push log to Kinesis stream: %v", err)
+			return &pb.PushLogsResponse{
+				Success: false,
+				Message: "Failed to push log to Kinesis stream",
+			}, err
+		}
 	}
-
-	utils.PushDataToKinesisStream(data)
 
 	return &pb.PushLogsResponse{
 		Success: true,
-		Message: "Log pushed successfully",
+		Message: "Logs pushed successfully",
 	}, nil
 }
 

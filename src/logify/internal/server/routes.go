@@ -20,6 +20,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	return r
 }
 
+// to test 1 single push
 func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 	resp := make(map[string]string)
 	resp["message"] = "Hello World"
