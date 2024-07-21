@@ -12,7 +12,6 @@ resource "aws_vpc" "main" {
   lifecycle {
     create_before_destroy = true
   }
-  depends_on = [null_resource.cleanup_resources]
 }
 
 resource "aws_subnet" "public" {
@@ -224,16 +223,8 @@ resource "aws_db_subnet_group" "main" {
 
 resource "aws_security_group" "lambda" {
   name        = "lambda-sg"
-  description = "Allow outbound traffic from Lambda to RDS"
+  description = "Security group for Lambda functions"
   vpc_id      = aws_vpc.main.id
-
-  egress {
-    description     = "Allow outbound to RDS"
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.rds.id]
-  }
 
   egress {
     from_port   = 0
@@ -245,7 +236,7 @@ resource "aws_security_group" "lambda" {
 
 resource "aws_security_group" "rds" {
   name        = "rds-sg"
-  description = "Allow inbound traffic from EKS"
+  description = "Allow inbound traffic from EKS and Lambda"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -264,7 +255,6 @@ resource "aws_security_group" "rds" {
     security_groups = [aws_security_group.lambda.id]
   }
 
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -272,7 +262,6 @@ resource "aws_security_group" "rds" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-
 resource "aws_db_instance" "main" {
   identifier           = "main-db"
   engine               = "postgres"
@@ -328,15 +317,6 @@ resource "aws_s3_bucket_public_access_block" "aether" {
   restrict_public_buckets = false
 }
 
-resource "aws_s3_bucket_public_access_block" "private_bucket" {
-  bucket = aws_s3_bucket.private_bucket.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
 resource "aws_sqs_queue" "aether" {
   name = var.sqs_queue_name
 }
@@ -378,7 +358,7 @@ resource "helm_release" "argocd" {
         - --insecure
     configs:
       secret:
-        argocdServerAdminPassword: "${var.argocd_admin_password}"
+        argocdServerAdminPassword: "${bcrypt(var.argocd_admin_password)}"
     EOT
   ]
 
@@ -389,10 +369,13 @@ resource "kubernetes_secret" "argocd_ssh_key" {
   metadata {
     name      = "argocd-ssh-key"
     namespace = "argocd"
+    labels = {
+      "argocd.argoproj.io/secret-type" = "repository"
+    }
   }
 
   data = {
-    "sshPrivateKey" = base64encode(file("${var.ssh_private_key_path}"))
+    "sshPrivateKey" = file("${var.ssh_private_key_path}")
   }
 
   type = "Opaque"
@@ -405,15 +388,15 @@ resource "kubectl_manifest" "argocd_repository" {
 apiVersion: v1
 kind: Secret
 metadata:
-  name: private-repo
+  name: ather-repo
   namespace: argocd
   labels:
     argocd.argoproj.io/secret-type: repository
 stringData:
   type: git
-  url: git@github.com:your-org/your-private-repo.git
+  url: git@github.com:ramchaik/aether.git
   sshPrivateKey: |
-    ${file("${var.ssh_private_key_path}")}
+    ${indent(4, file("${var.ssh_private_key_path}"))}
 YAML
 
   depends_on = [helm_release.argocd, kubernetes_secret.argocd_ssh_key]
@@ -429,17 +412,17 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: "${var.argocd_repo_url}"
+    repoURL: git@github.com:ramchaik/aether.git
     targetRevision: "${var.argocd_repo_branch}"
     path: "${var.argocd_repo_path}"
   destination:
     server: https://kubernetes.default.svc
-    namespace: default
+    namespace: aether
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
-  YAML
+YAML
 
-  depends_on = [helm_release.argocd, kubernetes_secret.argocd_github_secret]
+  depends_on = [helm_release.argocd, kubectl_manifest.argocd_repository]
 }

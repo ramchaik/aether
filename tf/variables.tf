@@ -69,4 +69,5 @@ variable "argocd_repo_branch" {
 variable "ssh_private_key_path" {
   description = "Path to the SSH private key file"
   type        = string
+  sensitive   = true
 }
