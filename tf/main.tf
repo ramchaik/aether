@@ -262,6 +262,7 @@ resource "aws_security_group" "rds" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
 resource "aws_db_instance" "main" {
   identifier           = "main-db"
   engine               = "postgres"
