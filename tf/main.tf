@@ -108,7 +108,7 @@ resource "aws_eks_node_group" "main" {
     max_size     = 1
     min_size     = 1
   }
-  instance_types = ["t3.medium", "t3a.medium"] #"t3.small", "t3a.small",
+  instance_types = ["t3.medium", "t3a.medium"]
   capacity_type  = "SPOT"
   disk_size      = 20
   depends_on     = [aws_eks_cluster.main]
@@ -140,18 +140,19 @@ resource "null_resource" "cleanup_resources" {
     vpc_id         = aws_vpc.main.id
     nat_eip_id     = aws_eip.nat.id
     s3_bucket_name = aws_s3_bucket.aether.id
+    region         = var.region
   }
 
   provisioner "local-exec" {
     when    = destroy
     command = <<-EOT
       # Release Elastic IP
-      aws ec2 release-address --allocation-id ${self.triggers.nat_eip_id}
+      aws ec2 release-address --allocation-id ${self.triggers.nat_eip_id} --region ${self.triggers.region}
 
       # Delete all resources in the VPC
-      aws ec2 describe-instances --filters "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'Reservations[].Instances[].InstanceId' --output text | xargs -r aws ec2 terminate-instances --instance-ids
-      aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'NatGateways[].NatGatewayId' --output text | xargs -r -n1 aws ec2 delete-nat-gateway --nat-gateway-id
-      aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'NetworkInterfaces[].NetworkInterfaceId' --output text | xargs -r -n1 aws ec2 delete-network-interface --network-interface-id
+      aws ec2 describe-instances --filters "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'Reservations[].Instances[].InstanceId' --output text --region ${self.triggers.region} | xargs -r aws ec2 terminate-instances --instance-ids --region ${self.triggers.region}
+      aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'NatGateways[].NatGatewayId' --output text --region ${self.triggers.region} | xargs -r -n1 aws ec2 delete-nat-gateway --nat-gateway-id --region ${self.triggers.region}
+      aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'NetworkInterfaces[].NetworkInterfaceId' --output text --region ${self.triggers.region} | xargs -r -n1 aws ec2 delete-network-interface --network-interface-id --region ${self.triggers.region}
 
       # Wait for resources to be deleted
       sleep 300
@@ -159,7 +160,6 @@ resource "null_resource" "cleanup_resources" {
   }
   depends_on = [null_resource.delete_eks_resources]
 }
-
 
 resource "aws_db_parameter_group" "custom_pg" {
   family = "postgres15"
