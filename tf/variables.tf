@@ -44,7 +44,29 @@ variable "kinesis_stream_name" {
   type        = string
 }
 
-variable "private_s3_bucket_name" {
-  description = "Name of the private S3 bucket"
+variable "argocd_admin_password" {
+  description = "Admin password for ArgoCD"
+  type        = string
+  sensitive   = true
+}
+
+variable "argocd_repo_url" {
+  description = "Git repository URL for ArgoCD applications"
+  type        = string
+}
+
+variable "argocd_repo_path" {
+  description = "Path in the Git repository containing Kubernetes manifests"
+  type        = string
+}
+
+variable "argocd_repo_branch" {
+  description = "Branch of the Git repository to track"
+  type        = string
+  default     = "main"
+}
+
+variable "ssh_private_key_path" {
+  description = "Path to the SSH private key file"
   type        = string
 }

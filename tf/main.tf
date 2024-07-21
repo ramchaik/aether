@@ -1,7 +1,3 @@
-provider "aws" {
-  region = var.region
-}
-
 data "aws_availability_zones" "available" {
   state = "available"
 }
@@ -99,9 +95,30 @@ resource "aws_eks_cluster" "main" {
   version = "1.30"
 }
 
-resource "aws_eks_node_group" "main" {
+resource "aws_eks_node_group" "general" {
   cluster_name    = aws_eks_cluster.main.name
-  node_group_name = "main-node-group"
+  node_group_name = "general-node-group"
+  node_role_arn   = var.node_role_arn
+  subnet_ids      = concat(aws_subnet.public[*].id, aws_subnet.private[*].id)
+  scaling_config {
+    desired_size = 1
+    max_size     = 1
+    min_size     = 1
+  }
+  instance_types = ["t3.small", "t3a.small"]
+  capacity_type  = "SPOT"
+  disk_size      = 20
+
+  labels = {
+    "node-group" = "general"
+  }
+
+  depends_on = [aws_eks_cluster.main]
+}
+
+resource "aws_eks_node_group" "forge" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "forge-node-group"
   node_role_arn   = var.node_role_arn
   subnet_ids      = concat(aws_subnet.public[*].id, aws_subnet.private[*].id)
   scaling_config {
@@ -112,7 +129,12 @@ resource "aws_eks_node_group" "main" {
   instance_types = ["t3.medium", "t3a.medium"]
   capacity_type  = "SPOT"
   disk_size      = 20
-  depends_on     = [aws_eks_cluster.main]
+
+  labels = {
+    "node-group" = "forge"
+  }
+
+  depends_on = [aws_eks_cluster.main]
 }
 
 resource "null_resource" "delete_eks_resources" {
@@ -134,7 +156,7 @@ resource "null_resource" "delete_eks_resources" {
     EOT
   }
 
-  depends_on = [aws_eks_node_group.main]
+  depends_on = [aws_eks_node_group.general, aws_eks_node_group.forge]
 }
 
 resource "null_resource" "cleanup_resources" {
@@ -339,4 +361,85 @@ resource "aws_kinesis_stream" "aether" {
   tags = {
     Name = var.kinesis_stream_name
   }
+}
+
+resource "helm_release" "argocd" {
+  name             = "argocd"
+  repository       = "https://argoproj.github.io/argo-helm"
+  chart            = "argo-cd"
+  namespace        = "argocd"
+  create_namespace = true
+  version          = "5.36.1"
+
+  values = [
+    <<-EOT
+    server:
+      extraArgs:
+        - --insecure
+    configs:
+      secret:
+        argocdServerAdminPassword: "${var.argocd_admin_password}"
+    EOT
+  ]
+
+  depends_on = [aws_eks_node_group.general, aws_eks_node_group.forge]
+}
+
+resource "kubernetes_secret" "argocd_ssh_key" {
+  metadata {
+    name      = "argocd-ssh-key"
+    namespace = "argocd"
+  }
+
+  data = {
+    "sshPrivateKey" = base64encode(file("${var.ssh_private_key_path}"))
+  }
+
+  type = "Opaque"
+
+  depends_on = [helm_release.argocd]
+}
+
+resource "kubectl_manifest" "argocd_repository" {
+  yaml_body = <<-YAML
+apiVersion: v1
+kind: Secret
+metadata:
+  name: private-repo
+  namespace: argocd
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  type: git
+  url: git@github.com:your-org/your-private-repo.git
+  sshPrivateKey: |
+    ${file("${var.ssh_private_key_path}")}
+YAML
+
+  depends_on = [helm_release.argocd, kubernetes_secret.argocd_ssh_key]
+}
+
+resource "kubectl_manifest" "argocd_application" {
+  yaml_body = <<-YAML
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: aether
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: "${var.argocd_repo_url}"
+    targetRevision: "${var.argocd_repo_branch}"
+    path: "${var.argocd_repo_path}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+  YAML
+
+  depends_on = [helm_release.argocd, kubernetes_secret.argocd_github_secret]
 }
