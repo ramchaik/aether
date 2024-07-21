@@ -233,7 +233,6 @@ resource "aws_db_instance" "main" {
   }
 }
 
-
 resource "aws_s3_bucket" "aether" {
   bucket        = var.s3_bucket_name
   force_destroy = true
@@ -269,7 +268,7 @@ resource "aws_s3_bucket_public_access_block" "aether" {
 }
 
 resource "aws_s3_bucket" "private_bucket" {
-  bucket = var.private_s3_bucket_name
+  bucket        = var.private_s3_bucket_name
   force_destroy = true
 
   tags = {
@@ -277,9 +276,11 @@ resource "aws_s3_bucket" "private_bucket" {
   }
 }
 
-resource "aws_s3_bucket_acl" "private_bucket_acl" {
+resource "aws_s3_bucket_ownership_controls" "private_bucket_ownership" {
   bucket = aws_s3_bucket.private_bucket.id
-  acl    = "private"
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "private_bucket" {
