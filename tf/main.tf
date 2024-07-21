@@ -16,6 +16,7 @@ resource "aws_vpc" "main" {
   lifecycle {
     create_before_destroy = true
   }
+  depends_on = [null_resource.cleanup_resources]
 }
 
 resource "aws_subnet" "public" {
@@ -128,7 +129,8 @@ resource "null_resource" "delete_eks_resources" {
       kubectl delete deployments --all
       kubectl delete pods --all
       kubectl delete daemonsets --all
-      sleep 60  # Wait for resources to be deleted
+      kubectl get svc --all-namespaces -o json | jq -r '.items[] | select(.spec.type=="LoadBalancer") | .metadata.name' | xargs -I {} kubectl delete svc {}
+      sleep 300  # Increased wait time for EKS resources to be deleted
     EOT
   }
 
@@ -139,6 +141,7 @@ resource "null_resource" "cleanup_resources" {
   triggers = {
     vpc_id         = aws_vpc.main.id
     nat_eip_id     = aws_eip.nat.id
+    igw_id         = aws_internet_gateway.main.id
     s3_bucket_name = aws_s3_bucket.aether.id
     region         = var.region
   }
@@ -152,10 +155,16 @@ resource "null_resource" "cleanup_resources" {
       # Delete all resources in the VPC
       aws ec2 describe-instances --filters "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'Reservations[].Instances[].InstanceId' --output text --region ${self.triggers.region} | xargs -r aws ec2 terminate-instances --instance-ids --region ${self.triggers.region}
       aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'NatGateways[].NatGatewayId' --output text --region ${self.triggers.region} | xargs -r -n1 aws ec2 delete-nat-gateway --nat-gateway-id --region ${self.triggers.region}
+      
+      # Delete ENIs
       aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'NetworkInterfaces[].NetworkInterfaceId' --output text --region ${self.triggers.region} | xargs -r -n1 aws ec2 delete-network-interface --network-interface-id --region ${self.triggers.region}
+      
+      # Detach and delete Internet Gateway
+      aws ec2 detach-internet-gateway --internet-gateway-id ${self.triggers.igw_id} --vpc-id ${self.triggers.vpc_id} --region ${self.triggers.region}
+      aws ec2 delete-internet-gateway --internet-gateway-id ${self.triggers.igw_id} --region ${self.triggers.region}
 
       # Wait for resources to be deleted
-      sleep 300
+      sleep 600
     EOT
   }
   depends_on = [null_resource.delete_eks_resources]
@@ -295,22 +304,6 @@ resource "aws_s3_bucket_public_access_block" "aether" {
   block_public_policy     = false
   ignore_public_acls      = false
   restrict_public_buckets = false
-}
-
-resource "aws_s3_bucket" "private_bucket" {
-  bucket        = var.private_s3_bucket_name
-  force_destroy = true
-
-  tags = {
-    Name = var.private_s3_bucket_name
-  }
-}
-
-resource "aws_s3_bucket_ownership_controls" "private_bucket_ownership" {
-  bucket = aws_s3_bucket.private_bucket.id
-  rule {
-    object_ownership = "BucketOwnerPreferred"
-  }
 }
 
 resource "aws_s3_bucket_public_access_block" "private_bucket" {
