@@ -24,6 +24,8 @@ spec:
           env:
             - name: BACKEND_API_HOST
               value: "http://launchpad-service"
+            - name: LOGS_BACKEND_API_HOST
+              value: "http://logify-service"
           resources:
             limits:
               cpu: 500m
