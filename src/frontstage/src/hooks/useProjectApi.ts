@@ -4,6 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 const ALL_PROJECTS_QUERY_KEY = "allProjects";
 const PROJECT_QUERY_KEY = "project";
 const PROJECT_DEPLOY_QUERY_KEY = "projectDeploy";
+const PROJECT_LOGS_QUERY_KEY = "projectLogs";
 
 interface ProjectData {
   name: string;
@@ -84,6 +85,25 @@ export const deployProject = async (
   return response.json();
 };
 
+export const fetchProjectLogs = async (
+  projectId: string,
+  token: string | null
+) => {
+  const response = await fetch(`/api/project/${projectId}/logs`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Something went wrong");
+  }
+
+  return response.json();
+};
+
 export function useCreateProject() {
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
@@ -144,4 +164,19 @@ export function useDeployProject() {
       },
     }
   );
+}
+
+export function useFetchProjectLogs<T>(projectId: string, options = {}) {
+  const { getToken } = useAuth();
+
+  return useQuery<T>({
+    queryKey: [PROJECT_LOGS_QUERY_KEY, projectId],
+    queryFn: async () => {
+      const token = await getToken();
+      return fetchProjectLogs(projectId, token);
+    },
+    // Only fetch when projectId is available
+    enabled: !!projectId,
+    ...options,
+  });
 }

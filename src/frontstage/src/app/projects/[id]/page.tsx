@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
   CardBody,
@@ -11,39 +11,21 @@ import {
   Tooltip,
   Progress,
   CircularProgress,
+  ScrollShadow,
 } from "@nextui-org/react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import {
   deployProject,
   useDeployProject,
   useFetchProject,
+  useFetchProjectLogs,
 } from "@/hooks/useProjectApi";
 import { Project } from "@/store/useProjectStore";
 import { CheckIcon, ClockIcon } from "@heroicons/react/24/solid";
 import toast from "react-hot-toast";
 import Loader from "@/components/loader";
 import Error from "@/components/error";
-
-// Dummy build logs
-const buildLogs = [
-  { timestamp: "2024-07-11T10:05:00Z", message: "Build started" },
-  { timestamp: "2024-07-11T10:05:05Z", message: "Installing dependencies..." },
-  {
-    timestamp: "2024-07-11T10:06:00Z",
-    message: "Dependencies installed successfully",
-  },
-  {
-    timestamp: "2024-07-11T10:06:05Z",
-    message: "Running build command: npm run build",
-  },
-  {
-    timestamp: "2024-07-11T10:07:00Z",
-    message: "Build completed successfully",
-  },
-  { timestamp: "2024-07-11T10:07:05Z", message: "Deploying to Vercel..." },
-  { timestamp: "2024-07-11T10:08:00Z", message: "Deployment successful" },
-];
 
 const ProjectDetailPage: React.FC = () => {
   const params = useParams();
@@ -53,6 +35,24 @@ const ProjectDetailPage: React.FC = () => {
     isLoading,
     error,
   } = useFetchProject<Project>(projectId);
+
+  const [isPolling, setIsPolling] = useState(false);
+
+  const {
+    data: logs,
+    isLoading: isLogsLoading,
+    error: logsError,
+  } = useFetchProjectLogs<any>(projectId, {
+    refetchInterval: isPolling ? 5000 : false, // Poll every 5 seconds if isPolling is true
+  });
+
+  useEffect(() => {
+    if (project?.status === "DEPLOYING") {
+      setIsPolling(true);
+    } else {
+      setIsPolling(false);
+    }
+  }, [project?.status]);
 
   const deployProjectMutation = useDeployProject();
   const [isDeploying, setIsDeploying] = useState(false);
@@ -208,23 +208,65 @@ const ProjectDetailPage: React.FC = () => {
             </div>
           </CardBody>
         </Card>
-
         <Card>
           <CardHeader>
             <h2 className="text-xl font-bold">Build Logs</h2>
           </CardHeader>
           <Divider />
           <CardBody>
-            <div className="bg-gray-100 p-4 rounded-lg max-h-96 overflow-y-auto">
-              {buildLogs.map((log, index) => (
-                <div key={index} className="mb-2">
-                  <span className="text-gray-500 mr-2">
-                    {new Date(log.timestamp).toLocaleTimeString()}
-                  </span>
-                  <span>{log.message}</span>
+            {isLogsLoading ? (
+              <Loader size="md" color="primary" />
+            ) : logsError ? (
+              <Error message="Failed to load logs" />
+            ) : logs && logs.length > 0 ? (
+              <ScrollShadow className="h-[400px]">
+                <div className="bg-gray-100 p-4 rounded-lg">
+                  <AnimatePresence>
+                    {logs.map((log: any, index: number) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.3 }}
+                        className="mb-2"
+                      >
+                        <span className="text-gray-500 mr-2">
+                          {new Date(log.timestamp).toLocaleTimeString()}
+                        </span>
+                        <span>
+                          {(() => {
+                            try {
+                              const parsedLog = JSON.parse(log.log);
+                              return parsedLog.stream || log.log;
+                            } catch {
+                              return log.log;
+                            }
+                          })()}
+                        </span>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                 </div>
-              ))}
-            </div>
+              </ScrollShadow>
+            ) : (
+              <p>No logs available</p>
+            )}
+            {project.status === "DEPLOYING" && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{
+                  duration: 0.5,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                }}
+                className="mt-4 flex justify-center items-center"
+              >
+                <CircularProgress size="sm" color="primary" />
+                <span className="ml-2">Building in progress...</span>
+              </motion.div>
+            )}
           </CardBody>
         </Card>
       </motion.div>
