@@ -7,8 +7,14 @@ provider:
   region: us-east-1
   role: arn:aws:iam::502413910473:role/LabRole
   environment:
-    BUCKET_NAME: aether-logs-bucket
-    KINESIS_STREAM_NAME: aether-logs-stream
+    DATABASE_URL: postgresql://vaibhavadmin:vaibhavadmin@main-db.ctnalk0fsjpr.us-east-1.rds.amazonaws.com:5432/aether-logs?sslmode=disable
+    KINESIS_STREAM: aether-logs-stream
+  vpc:
+    securityGroupIds:
+      - sg-06324f4e6f4bddb80
+    subnetIds:
+      - subnet-08d5f096147effbd3
+      - subnet-057cf9a9cd6e310ec
 
 package:
   patterns:
@@ -29,4 +35,4 @@ functions:
                 - kinesis
                 - Ref: AWS::Region
                 - Ref: AWS::AccountId
-                - stream/${self:provider.environment.KINESIS_STREAM_NAME}
+                - stream/${self:provider.environment.KINESIS_STREAM}
