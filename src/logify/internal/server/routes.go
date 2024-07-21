@@ -14,8 +14,11 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
-	r.Post("/logs", s.bulkInsertLogs)
-	r.Get("/{project-id}/logs", s.getProjectLogs)
+	api := "/api/v1"
+	r.Route(api, func(r chi.Router) {
+		r.Post("/logs", s.bulkInsertLogs)
+		r.Get("/{project-id}/logs", s.getProjectLogs)
+	})
 
 	return r
 }
