@@ -264,7 +264,7 @@ const ProjectDetailPage: React.FC = () => {
                 className="mt-4 flex justify-center items-center"
               >
                 <CircularProgress size="sm" color="primary" />
-                <span className="ml-2">Building in progress...</span>
+                <span className="ml-2">Build in progress...</span>
               </motion.div>
             )}
           </CardBody>
