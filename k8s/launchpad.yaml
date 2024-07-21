@@ -3,11 +3,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: launchpad-sa
+  namespace: aether
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: service-reader
+  namespace: aether
 rules:
   - apiGroups: [""]
     resources: ["services"]
@@ -20,6 +22,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: read-services
+  namespace: aether
 subjects:
   - kind: ServiceAccount
     name: launchpad-sa
@@ -32,6 +35,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: proxy-ip-config
+  namespace: aether
 data:
   PROXY_IP: ""
 ---
@@ -39,6 +43,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: launchpad-deployment
+  namespace: aether
 spec:
   replicas: 1
   selector:
@@ -49,6 +54,8 @@ spec:
       labels:
         app: launchpad-app
     spec:
+      nodeSelector:
+        node-group: general
       serviceAccountName: launchpad-sa
       initContainers:
         - name: migrate-db
@@ -113,27 +120,28 @@ spec:
                 configMapKeyRef:
                   name: proxy-ip-config
                   key: PROXY_IP
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: aws-credentials
-                  key: AWS_ACCESS_KEY_ID
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: aws-credentials
-                  key: AWS_SECRET_ACCESS_KEY
-            - name: AWS_SESSION_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: aws-credentials
-                  key: AWS_SESSION_TOKEN
+            # - name: AWS_ACCESS_KEY_ID
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: aws-credentials
+            #       key: AWS_ACCESS_KEY_ID
+            # - name: AWS_SECRET_ACCESS_KEY
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: aws-credentials
+            #       key: AWS_SECRET_ACCESS_KEY
+            # - name: AWS_SESSION_TOKEN
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: aws-credentials
+            #       key: AWS_SESSION_TOKEN
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: launchpad-service
+  namespace: aether
 spec:
   selector:
     app: launchpad-app

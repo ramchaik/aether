@@ -3,6 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontstage-deployment
+  namespace: aether
   labels:
     app: frontstage
 spec:
@@ -15,6 +16,8 @@ spec:
       labels:
         app: frontstage
     spec:
+      nodeSelector:
+        node-group: general
       containers:
         - name: frontstage
           image: vsramchaik/aether-frontstage:latest
@@ -50,6 +53,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: frontstage-service
+  namespace: aether
 spec:
   selector:
     app: frontstage

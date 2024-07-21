@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: proxy-deployment
+  namespace: aether
 spec:
   replicas: 1
   selector:
@@ -12,6 +13,8 @@ spec:
       labels:
         app: proxy
     spec:
+      nodeSelector:
+        node-group: general
       containers:
         - name: proxy-container
           image: vsramchaik/aether-proxy:latest
@@ -31,27 +34,28 @@ spec:
               value: "9000"
             - name: APP_ENV
               value: prod
-            - name: AWS_ACCESS_KEY_ID
-              valueFrom:
-                secretKeyRef:
-                  name: aws-credentials
-                  key: AWS_ACCESS_KEY_ID
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: aws-credentials
-                  key: AWS_SECRET_ACCESS_KEY
-            - name: AWS_SESSION_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: aws-credentials
-                  key: AWS_SESSION_TOKEN
+            # - name: AWS_ACCESS_KEY_ID
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: aws-credentials
+            #       key: AWS_ACCESS_KEY_ID
+            # - name: AWS_SECRET_ACCESS_KEY
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: aws-credentials
+            #       key: AWS_SECRET_ACCESS_KEY
+            # - name: AWS_SESSION_TOKEN
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: aws-credentials
+            #       key: AWS_SESSION_TOKEN
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: proxy-service
+  namespace: aether
 spec:
   selector:
     app: proxy
