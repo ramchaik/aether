@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"log"
+	"logify/internal/database"
 	"net/http"
 	"os"
 	"strconv"
@@ -13,12 +14,18 @@ import (
 
 type Server struct {
 	port int
+	db   database.Service
 }
 
 func NewServer() *http.Server {
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
 	NewServer := &Server{
 		port: port,
+		db:   database.New(),
+	}
+
+	if err := NewServer.db.Migrate(); err != nil {
+		log.Fatalf("Failed to apply migrations: %v", err)
 	}
 
 	log.Println("HTTP server running at", port)
