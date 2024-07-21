@@ -38,6 +38,18 @@ spec:
               value: aether-build-logs
             - name: GRPC_SERVER_ADDRESS
               value: "0.0.0.0:50051"
+            - name: MAIN_DB_DATABASE
+              value: aether
+            - name: DB_DATABASE
+              value: aether-logs
+            - name: DB_USERNAME
+              value: vaibhavadmin
+            - name: DB_PASSWORD
+              value: vaibhavadmin
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_HOST
+              value: main-db.ctnalk0fsjpr.us-east-1.rds.amazonaws.com
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
