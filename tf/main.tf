@@ -191,6 +191,27 @@ resource "aws_db_subnet_group" "main" {
   subnet_ids = aws_subnet.private[*].id
 }
 
+resource "aws_security_group" "lambda" {
+  name        = "lambda-sg"
+  description = "Allow outbound traffic from Lambda to RDS"
+  vpc_id      = aws_vpc.main.id
+
+  egress {
+    description     = "Allow outbound to RDS"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.rds.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 resource "aws_security_group" "rds" {
   name        = "rds-sg"
   description = "Allow inbound traffic from EKS"
@@ -203,6 +224,15 @@ resource "aws_security_group" "rds" {
     protocol        = "tcp"
     security_groups = [aws_eks_cluster.main.vpc_config[0].cluster_security_group_id]
   }
+
+  ingress {
+    description     = "Allow inbound from Lambda"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.lambda.id]
+  }
+
 
   egress {
     from_port   = 0
@@ -225,7 +255,7 @@ resource "aws_db_instance" "main" {
   parameter_group_name = aws_db_parameter_group.custom_pg.name
   skip_final_snapshot  = true
 
-  vpc_security_group_ids = [aws_security_group.rds.id]
+  vpc_security_group_ids = [aws_security_group.rds.id, aws_security_group.lambda.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
 
   tags = {
