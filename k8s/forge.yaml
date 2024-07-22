@@ -12,7 +12,10 @@ spec:
     metadata:
       labels:
         app: forge
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::502413910473:role/LabRole
     spec:
+      serviceAccountName: default
       nodeSelector:
         node-group: forge
       hostPID: true
