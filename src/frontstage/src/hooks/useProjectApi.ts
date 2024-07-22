@@ -89,7 +89,7 @@ export const fetchProjectLogs = async (
   projectId: string,
   token: string | null
 ) => {
-  const response = await fetch(`/api/project/${projectId}/logs`, {
+  const response = await fetch(`/api/project/${projectId}/log`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
