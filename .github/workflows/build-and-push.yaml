@@ -1,0 +1,47 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/forge/**"
+      - "src/frontstage/**"
+      - "src/launchpad/**"
+      - "src/logify/**"
+      - "src/proxy/**"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        directory:
+          - src/forge
+          - src/frontstage
+          - src/launchpad
+          - src/logify
+          - src/proxy
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # FOR AWS ECR
+      # - name: Log in to Amazon ECR
+      #   uses: aws-actions/amazon-ecr-login@v1
+      #   with:
+      #     region: us-east-1
+
+      - name: Build and push Docker images
+        run: |
+          DIR_NAME=$(basename ${{ matrix.directory }})
+          docker build -t "docker.io/vsramchaik/aether-$DIR_NAME" ${{ matrix.directory }}
+          docker push "docker.io/vsramchaik/aether-$DIR_NAME"
