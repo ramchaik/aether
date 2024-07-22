@@ -40,7 +40,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: clerk-keys
-                  key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+                  key: PUBLIC_CLERK_PUBLISHABLE_KEY
             - name: CLERK_SECRET_KEY
               valueFrom:
                 secretKeyRef:

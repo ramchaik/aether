@@ -135,6 +135,16 @@ spec:
                 secretKeyRef:
                   name: aws-credentials
                   key: AWS_SESSION_TOKEN
+            - name: CLERK_PUBLISHABLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: clerk-keys
+                  key: PUBLIC_CLERK_PUBLISHABLE_KEY
+            - name: CLERK_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: clerk-keys
+                  key: CLERK_SECRET_KEY
 
 ---
 apiVersion: v1
