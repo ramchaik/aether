@@ -211,21 +211,18 @@ const ProjectDetailPage: React.FC = () => {
             </div>
           </CardBody>
         </Card>
+
         <Card>
           <CardHeader>
             <h2 className="text-xl font-bold">Build Logs</h2>
           </CardHeader>
           <Divider />
           <CardBody>
-            {isLogsLoading ? (
-              <Loader size="md" color="primary" />
-            ) : logsError ? (
-              <Error message="Failed to load logs" />
-            ) : logs && logs.length > 0 ? (
-              <ScrollShadow className="h-[400px]">
-                <div className="bg-gray-100 p-4 rounded-lg">
-                  <AnimatePresence>
-                    {logs.map((log: any, index: number) => (
+            <ScrollShadow className="h-[400px]">
+              <div className="bg-gray-100 p-4 rounded-lg">
+                <AnimatePresence>
+                  {logs && logs.length > 0 ? (
+                    logs.map((log: any, index: number) => (
                       <motion.div
                         key={index}
                         initial={{ opacity: 0, y: 20 }}
@@ -248,13 +245,13 @@ const ProjectDetailPage: React.FC = () => {
                           })()}
                         </span>
                       </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              </ScrollShadow>
-            ) : (
-              <p>No logs available</p>
-            )}
+                    ))
+                  ) : (
+                    <p>No logs available</p>
+                  )}
+                </AnimatePresence>
+              </div>
+            </ScrollShadow>
             {project.status === "DEPLOYING" && (
               <motion.div
                 initial={{ opacity: 0 }}
