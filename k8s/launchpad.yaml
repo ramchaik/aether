@@ -113,6 +113,10 @@ spec:
           env:
             - name: DATABASE_URL
               value: "postgresql://vaibhavadmin:vaibhavadmin@main-db.ctnalk0fsjpr.us-east-1.rds.amazonaws.com:5432/aether?sslmode=disable"
+            - name: AWS_QUEUE_URL
+              value: https://sqs.us-east-1.amazonaws.com/502413910473/aether-queue
+            - name: AWS_REGION
+              value: us-east-1
             - name: GRPC_SERVER_ADDRESS
               value: "0.0.0.0:50051"
             - name: PROXY_SVC
