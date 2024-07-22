@@ -42,17 +42,20 @@ const ProjectDetailPage: React.FC = () => {
     data: logs,
     isLoading: isLogsLoading,
     error: logsError,
+    refetch: refetchLogs,
   } = useFetchProjectLogs<any>(projectId, {
+    enabled: false, // Disable automatic fetching
     refetchInterval: isPolling ? 5000 : false, // Poll every 5 seconds if isPolling is true
   });
 
   useEffect(() => {
     if (project?.status === "DEPLOYING") {
       setIsPolling(true);
+      refetchLogs(); // Start fetching logs
     } else {
       setIsPolling(false);
     }
-  }, [project?.status]);
+  }, [project?.status, refetchLogs]);
 
   const deployProjectMutation = useDeployProject();
   const [isDeploying, setIsDeploying] = useState(false);
