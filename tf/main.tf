@@ -69,6 +69,48 @@ resource "aws_eip" "nat" {
 resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public[0].id
+
+  depends_on = [aws_internet_gateway.main]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "null_resource" "vpc_cleanup" {
+  triggers = {
+    vpc_id = aws_vpc.main.id
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      ./cleanup.sh ${self.triggers.vpc_id}
+      
+      # Retry logic for VPC deletion
+      for i in {1..5}; do
+        if aws ec2 delete-vpc --vpc-id ${self.triggers.vpc_id}; then
+          echo "VPC deleted successfully"
+          exit 0
+        else
+          echo "VPC deletion failed, retrying in 30 seconds..."
+          sleep 30
+        fi
+      done
+      echo "Failed to delete VPC after 5 attempts"
+      exit 1
+    EOT
+  }
+
+  depends_on = [
+    aws_eks_cluster.main,
+    aws_eks_node_group.general,
+    aws_eks_node_group.forge,
+    aws_nat_gateway.main,
+    aws_internet_gateway.main,
+    aws_subnet.public,
+    aws_subnet.private
+  ]
 }
 
 resource "aws_route_table" "private" {
@@ -155,12 +197,16 @@ resource "kubernetes_secret" "aws_credentials" {
   }
 
   data = {
-    AWS_ACCESS_KEY_ID     = var.aws_access_key_id
-    AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
-    AWS_SESSION_TOKEN     = var.aws_session_token
+    AWS_ACCESS_KEY_ID     = sensitive(coalesce(var.aws_access_key_id, data.external.env_vars.result["AWS_ACCESS_KEY_ID"]))
+    AWS_SECRET_ACCESS_KEY = sensitive(coalesce(var.aws_secret_access_key, data.external.env_vars.result["AWS_SECRET_ACCESS_KEY"]))
+    AWS_SESSION_TOKEN     = sensitive(coalesce(var.aws_session_token, data.external.env_vars.result["AWS_SESSION_TOKEN"]))
   }
 
   depends_on = [kubernetes_namespace.aether]
+}
+
+data "external" "env_vars" {
+  program = ["sh", "-c", "echo '{\"AWS_ACCESS_KEY_ID\":\"'$AWS_ACCESS_KEY_ID'\",\"AWS_SECRET_ACCESS_KEY\":\"'$AWS_SECRET_ACCESS_KEY'\",\"AWS_SESSION_TOKEN\":\"'$AWS_SESSION_TOKEN'\"}'"]
 }
 
 resource "kubernetes_secret" "clerk_keys" {
@@ -240,6 +286,8 @@ resource "aws_security_group" "lambda" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  depends_on = [null_resource.vpc_cleanup]
 }
 
 resource "aws_security_group" "rds" {
@@ -269,6 +317,8 @@ resource "aws_security_group" "rds" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  depends_on = [null_resource.vpc_cleanup]
 }
 
 resource "aws_db_instance" "main" {
@@ -384,6 +434,21 @@ resource "aws_kinesis_stream" "aether" {
   }
 }
 
+resource "helm_release" "reloader" {
+  name       = "reloader"
+  repository = "https://stakater.github.io/stakater-charts"
+  chart      = "reloader"
+  namespace  = "kube-system"
+  version    = "v1.0.48"
+
+  set {
+    name  = "reloader.watchGlobally"
+    value = "false"
+  }
+
+  depends_on = [aws_eks_node_group.general, aws_eks_node_group.forge]
+}
+
 resource "helm_release" "argocd" {
   name             = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
@@ -496,17 +561,25 @@ resource "null_resource" "lambda_zip" {
       make clean build
       zip -j lambda_function.zip bootstrap
       mv lambda_function.zip ../../../tf/
+      cd ../../../tf
+      echo "$(pwd)/lambda_function.zip" > ${path.module}/zip_file_path.txt
+      echo "Created zip file at: $(pwd)/lambda_function.zip"
     EOT
   }
 }
 
+data "local_file" "zip_file_path" {
+  filename   = "${path.module}/zip_file_path.txt"
+  depends_on = [null_resource.lambda_zip]
+}
+
 resource "aws_lambda_function" "kinesis_consumer" {
-  filename         = "lambda_function.zip"
+  filename         = trimspace(data.local_file.zip_file_path.content)
   function_name    = "kinesis-consumer-lambda"
   role             = "arn:aws:iam::502413910473:role/LabRole"
   handler          = "bootstrap"
   runtime          = "provided.al2023"
-  source_code_hash = filebase64sha256("lambda_function.zip")
+  source_code_hash = filebase64sha256(trimspace(data.local_file.zip_file_path.content))
 
   environment {
     variables = {
@@ -525,6 +598,6 @@ resource "aws_lambda_function" "kinesis_consumer" {
 
 resource "aws_lambda_event_source_mapping" "kinesis_trigger" {
   event_source_arn  = aws_kinesis_stream.aether.arn
-  function_name     = aws_lambda_function.kinesis_consumer.arn
+  function_name     = aws_lambda_function.kinesis_consumer.function_name
   starting_position = "LATEST"
 }

@@ -207,3 +207,6 @@ dist
 k8s/aws-credentials-secret.yaml
 tf/lambda_function.zip
 tf/zip_file_path.txt
+
+# tf backup files
+**/*.backup

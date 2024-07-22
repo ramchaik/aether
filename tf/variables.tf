@@ -95,16 +95,19 @@ variable "ssh_private_key_path" {
 variable "aws_access_key_id" {
   type      = string
   sensitive = true
+  default   = ""
 }
 
 variable "aws_secret_access_key" {
   type      = string
   sensitive = true
+  default   = ""
 }
 
 variable "aws_session_token" {
   type      = string
   sensitive = true
+  default   = ""
 }
 
 variable "public_clerk_publishable_key" {
