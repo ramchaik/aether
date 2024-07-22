@@ -1,6 +1,73 @@
+# Dependencies
 node_modules
-npm-debug.log
-Dockerfile
-.dockerignore
+.pnpm-store
+
+# Version control
 .git
 .gitignore
+
+# Documentation
+*.md
+LICENSE
+
+# Build outputs
+dist
+build
+out
+
+# Development and debug files
+.vscode
+.idea
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment and configuration files
+.env*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Cache directories
+.cache
+.npm
+.pnpm
+
+# Test directories
+__tests__
+test
+tests
+coverage
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.swp
+*.swo
+*~
+
+# Project specific
+.eslintrc*
+.prettierrc*
+.editorconfig
+tsconfig.json
+tsconfig.build.json
+.eslintignore
+.prettierignore
+*.tsbuildinfo
+
+# Docker related
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Misc
+*.lock
+*.log
+*.bak
+*.tmp

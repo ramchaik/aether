@@ -1,0 +1,49 @@
+# Version control
+.git
+.gitignore
+
+# Go build cache and test files
+*.test
+*.out
+/tmp
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Application specific
+/vendor
+/bin
+/dist
+
+# Docker related
+Dockerfile
+docker-compose.yml
+
+# Test and documentation
+/tests
+README.md
+*.md
+
+.air.toml
+
+# Environment files
+.env
+*.env
+
+# Makefile (since you're using it for local development)
+Makefile
+
+
+# Any other build or temporary directories
+/build
+/temp
