@@ -4,7 +4,7 @@ metadata:
   name: logify-deployment
   namespace: aether
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: logify
