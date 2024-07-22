@@ -10,7 +10,7 @@ import (
 )
 
 type ProjectLogService interface {
-	PushLogs(projectId string, logs []LogEntry) (bool, string)
+	PushLogs(projectId string, logs LogEntry) (bool, string)
 }
 
 type LogEntry struct {
@@ -29,23 +29,18 @@ func NewProjectLogServiceClient(grpcConn *grpc.ClientConn) *projectLog {
 	}
 }
 
-func (p *projectLog) PushLogs(projectId string, logs []LogEntry) (bool, string) {
+func (p *projectLog) PushLogs(projectId string, logEntry LogEntry) (bool, string) {
 	c := pb.NewProjectLogServiceClient(p.grpc)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	pbLogs := make([]*pb.LogEntry, len(logs))
-	for i, entry := range logs {
-		pbLogs[i] = &pb.LogEntry{
-			Log:       entry.Log,
-			Timestamp: entry.Timestamp,
-		}
-	}
-
 	req := &pb.PushLogsRequest{
 		ProjectId: projectId,
-		Logs:      pbLogs,
+		LogEntry: &pb.LogEntry{
+			Log:       logEntry.Log,
+			Timestamp: logEntry.Timestamp,
+		},
 	}
 
 	r, err := c.PushLogs(ctx, req)

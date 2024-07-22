@@ -53,23 +53,19 @@ func ProcessMessage(
 
 	ctx := context.Background()
 
-	// Maintain array of log entries
-	var logEntries []service.LogEntry
+	// Push log entry
 	pushLogs := func(logMessage string) {
 		logEntry := service.LogEntry{
 			Log:       logMessage,
 			Timestamp: time.Now().Unix(),
 		}
-		logEntries = append(logEntries, logEntry)
+		logService.PushLogs(projectId, logEntry)
 	}
 
 	cli, buildDir, imageName, err := utils.BuildProject(ctx, repoURL, buildCommand, pushLogs)
 	if err != nil {
 		log.Fatalf("Failed to build project: %v", err)
 	}
-
-	// Push all the logs
-	logService.PushLogs(projectId, logEntries)
 
 	// Deploying to S3
 	bucketName := os.Getenv("AWS_BUCKET_NAME")

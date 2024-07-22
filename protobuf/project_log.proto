@@ -15,7 +15,7 @@ message LogEntry {
 
 message PushLogsRequest {
   string project_id = 1;
-  repeated LogEntry logs = 2;
+  LogEntry logEntry = 2;
 }
 
 message PushLogsResponse {
