@@ -62,7 +62,10 @@ spec:
           image: vsramchaik/aether-launchpad:latest
           env:
             - name: DATABASE_URL
-              value: "postgresql://vaibhavadmin:vaibhavadmin@main-db.ctnalk0fsjpr.us-east-1.rds.amazonaws.com:5432/aether?sslmode=disable"
+              valueFrom:
+                secretKeyRef:
+                  name: db-url
+                  key: DATABASE_URL
           command:
             - "sh"
             - "-c"
@@ -112,7 +115,10 @@ spec:
               cpu: 500m
           env:
             - name: DATABASE_URL
-              value: "postgresql://vaibhavadmin:vaibhavadmin@main-db.ctnalk0fsjpr.us-east-1.rds.amazonaws.com:5432/aether?sslmode=disable"
+              valueFrom:
+                secretKeyRef:
+                  name: db-url
+                  key: DATABASE_URL
             - name: AWS_QUEUE_URL
               value: https://sqs.us-east-1.amazonaws.com/502413910473/aether-queue
             - name: AWS_REGION
