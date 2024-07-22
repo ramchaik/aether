@@ -44,6 +44,8 @@ kind: Deployment
 metadata:
   name: launchpad-deployment
   namespace: aether
+  annotations:
+    reloader.stakater.com/auto: "true" # Enable reloader
 spec:
   replicas: 1
   selector:
@@ -53,6 +55,8 @@ spec:
     metadata:
       labels:
         app: launchpad-app
+      annotations:
+        reloader.stakater.com/match: "proxy-ip-config" # Watch for changes in this ConfigMap
     spec:
       nodeSelector:
         node-group: general
@@ -72,34 +76,6 @@ spec:
             - |
               pnpm run migrate
               echo "Drizzle migrations applied successfully."
-        - name: fetch-proxy-ip
-          image: bitnami/kubectl:latest
-          command:
-            - "sh"
-            - "-c"
-            - |
-              echo "Starting fetch-proxy-ip init container"
-              PROXY_IP=$(kubectl get svc proxy-service -n aether -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-              echo "Initial PROXY_IP value: $PROXY_IP"
-
-              ATTEMPT=1
-              while [ -z "$PROXY_IP" ]; do
-                echo "Attempt $ATTEMPT: PROXY_IP is empty, waiting 5 seconds before retry"
-                sleep 5
-                PROXY_IP=$(kubectl get svc proxy-service -n aether -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-                echo "Attempt $ATTEMPT: New PROXY_IP value: $PROXY_IP"
-                ATTEMPT=$((ATTEMPT+1))
-              done
-
-              echo "PROXY_IP found: $PROXY_IP"
-              echo "Creating/updating ConfigMap proxy-ip-config"
-              kubectl create configmap proxy-ip-config --from-literal=PROXY_IP=$PROXY_IP -n aether -o yaml --dry-run=client | kubectl apply -f -
-
-              echo "ConfigMap creation/update command executed"
-              echo "Verifying ConfigMap content:"
-              kubectl get configmap proxy-ip-config -n aether -o yaml
-
-              echo "fetch-proxy-ip init container completed"
       containers:
         - name: launchpad-app-container
           image: vsramchaik/aether-launchpad:latest
@@ -155,6 +131,32 @@ spec:
                 secretKeyRef:
                   name: clerk-keys
                   key: CLERK_SECRET_KEY
+        - name: proxy-ip-updater
+          image: bitnami/kubectl:latest
+          command:
+            - "/bin/sh"
+            - "-c"
+          args:
+            - |
+              while true; do
+                PROXY_IP=$(kubectl get svc proxy-service -n aether -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+                if [ -n "$PROXY_IP" ]; then
+                  kubectl create configmap proxy-ip-config --from-literal=PROXY_IP=$PROXY_IP -n aether -o yaml --dry-run=client | kubectl apply -f -
+                  echo "Updated ConfigMap with PROXY_IP: $PROXY_IP"
+                  break
+                fi
+                echo "Waiting for PROXY_IP..."
+                sleep 10
+              done
+              echo "PROXY_IP updater completed, entering sleep mode"
+              while true; do sleep 3600; done
+          resources:
+            requests:
+              memory: 50Mi
+              cpu: 100m
+            limits:
+              memory: 100Mi
+              cpu: 100m
 
 ---
 apiVersion: v1
