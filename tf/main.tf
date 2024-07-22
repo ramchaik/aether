@@ -163,6 +163,18 @@ resource "kubernetes_secret" "aws_credentials" {
   }
 }
 
+resource "kubernetes_secret" "clerk_keys" {
+  metadata {
+    name      = "clerk-keys"
+    namespace = "aether"
+  }
+
+  data = {
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = base64encode(var.next_public_clerk_publishable_key)
+    CLERK_SECRET_KEY                  = base64encode(var.clerk_secret_key)
+  }
+}
+
 resource "null_resource" "delete_eks_resources" {
   triggers = {
     cluster_name = aws_eks_cluster.main.name

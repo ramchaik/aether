@@ -106,3 +106,13 @@ variable "aws_session_token" {
   type      = string
   sensitive = true
 }
+
+variable "next_public_clerk_publishable_key" {
+  description = "Publishable key for Clerk"
+  type        = string
+}
+
+variable "clerk_secret_key" {
+  description = "Secret key for Clerk"
+  type        = string
+}
