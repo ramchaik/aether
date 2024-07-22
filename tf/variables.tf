@@ -107,7 +107,7 @@ variable "aws_session_token" {
   sensitive = true
 }
 
-variable "next_public_clerk_publishable_key" {
+variable "public_clerk_publishable_key" {
   description = "Publishable key for Clerk"
   type        = string
 }

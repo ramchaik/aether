@@ -136,15 +136,13 @@ resource "aws_eks_node_group" "forge" {
   depends_on = [aws_eks_cluster.main]
 }
 
-resource "null_resource" "create_namespace" {
-  provisioner "local-exec" {
-    command = <<EOT
-      aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1
-      kubectl create ns aether
-    EOT
+resource "kubernetes_namespace" "aether" {
+  metadata {
+    name = "aether"
   }
 
   depends_on = [
+    aws_eks_cluster.main,
     aws_eks_node_group.general,
     aws_eks_node_group.forge
   ]
@@ -161,6 +159,8 @@ resource "kubernetes_secret" "aws_credentials" {
     AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
     AWS_SESSION_TOKEN     = var.aws_session_token
   }
+
+  depends_on = [kubernetes_namespace.aether]
 }
 
 resource "kubernetes_secret" "clerk_keys" {
@@ -170,9 +170,11 @@ resource "kubernetes_secret" "clerk_keys" {
   }
 
   data = {
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = base64encode(var.next_public_clerk_publishable_key)
-    CLERK_SECRET_KEY                  = base64encode(var.clerk_secret_key)
+    PUBLIC_CLERK_PUBLISHABLE_KEY = var.public_clerk_publishable_key
+    CLERK_SECRET_KEY             = var.clerk_secret_key
   }
+
+  depends_on = [kubernetes_namespace.aether]
 }
 
 resource "null_resource" "delete_eks_resources" {
@@ -463,5 +465,9 @@ spec:
       selfHeal: true
 YAML
 
-  depends_on = [helm_release.argocd, kubectl_manifest.argocd_repository]
+  depends_on = [
+    helm_release.argocd,
+    kubectl_manifest.argocd_repository,
+    kubernetes_namespace.aether
+  ]
 }
