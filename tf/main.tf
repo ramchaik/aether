@@ -471,3 +471,60 @@ YAML
     kubernetes_namespace.aether
   ]
 }
+
+resource "kubernetes_secret" "db_url" {
+  metadata {
+    name      = "db-url"
+    namespace = "aether"
+  }
+
+  data = {
+    DATABASE_URL = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.main.endpoint}/aether?sslmode=disable"
+  }
+
+  depends_on = [kubernetes_namespace.aether]
+}
+
+resource "null_resource" "lambda_zip" {
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+
+  provisioner "local-exec" {
+    command = <<EOT
+      cd ../src/logify/serverless
+      make clean build
+      zip -j lambda_function.zip bootstrap
+      mv lambda_function.zip ../../../tf/
+    EOT
+  }
+}
+
+resource "aws_lambda_function" "kinesis_consumer" {
+  filename         = "lambda_function.zip"
+  function_name    = "kinesis-consumer-lambda"
+  role             = "arn:aws:iam::502413910473:role/LabRole"
+  handler          = "bootstrap"
+  runtime          = "provided.al2023"
+  source_code_hash = filebase64sha256("lambda_function.zip")
+
+  environment {
+    variables = {
+      DATABASE_URL   = "postgresql://${var.db_username}:${var.db_password}@${aws_db_instance.main.endpoint}/aether-logs?sslmode=disable"
+      KINESIS_STREAM = var.kinesis_stream_name
+    }
+  }
+
+  vpc_config {
+    subnet_ids         = aws_subnet.private[*].id
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+
+  depends_on = [null_resource.lambda_zip]
+}
+
+resource "aws_lambda_event_source_mapping" "kinesis_trigger" {
+  event_source_arn  = aws_kinesis_stream.aether.arn
+  function_name     = aws_lambda_function.kinesis_consumer.arn
+  starting_position = "LATEST"
+}
