@@ -136,6 +136,33 @@ resource "aws_eks_node_group" "forge" {
   depends_on = [aws_eks_cluster.main]
 }
 
+resource "null_resource" "create_namespace" {
+  provisioner "local-exec" {
+    command = <<EOT
+      aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region us-east-1
+      kubectl create ns aether
+    EOT
+  }
+
+  depends_on = [
+    aws_eks_node_group.general,
+    aws_eks_node_group.forge
+  ]
+}
+
+resource "kubernetes_secret" "aws_credentials" {
+  metadata {
+    name      = "aws-credentials"
+    namespace = "aether"
+  }
+
+  data = {
+    AWS_ACCESS_KEY_ID     = var.aws_access_key_id
+    AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
+    AWS_SESSION_TOKEN     = var.aws_session_token
+  }
+}
+
 resource "null_resource" "delete_eks_resources" {
   triggers = {
     cluster_name = aws_eks_cluster.main.name
@@ -156,39 +183,6 @@ resource "null_resource" "delete_eks_resources" {
   }
 
   depends_on = [aws_eks_node_group.general, aws_eks_node_group.forge]
-}
-
-resource "null_resource" "cleanup_resources" {
-  triggers = {
-    vpc_id         = aws_vpc.main.id
-    nat_eip_id     = aws_eip.nat.id
-    igw_id         = aws_internet_gateway.main.id
-    s3_bucket_name = aws_s3_bucket.aether.id
-    region         = var.region
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<-EOT
-      # Release Elastic IP
-      aws ec2 release-address --allocation-id ${self.triggers.nat_eip_id} --region ${self.triggers.region}
-
-      # Delete all resources in the VPC
-      aws ec2 describe-instances --filters "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'Reservations[].Instances[].InstanceId' --output text --region ${self.triggers.region} | xargs -r aws ec2 terminate-instances --instance-ids --region ${self.triggers.region}
-      aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'NatGateways[].NatGatewayId' --output text --region ${self.triggers.region} | xargs -r -n1 aws ec2 delete-nat-gateway --nat-gateway-id --region ${self.triggers.region}
-      
-      # Delete ENIs
-      aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=${self.triggers.vpc_id}" --query 'NetworkInterfaces[].NetworkInterfaceId' --output text --region ${self.triggers.region} | xargs -r -n1 aws ec2 delete-network-interface --network-interface-id --region ${self.triggers.region}
-      
-      # Detach and delete Internet Gateway
-      aws ec2 detach-internet-gateway --internet-gateway-id ${self.triggers.igw_id} --vpc-id ${self.triggers.vpc_id} --region ${self.triggers.region}
-      aws ec2 delete-internet-gateway --internet-gateway-id ${self.triggers.igw_id} --region ${self.triggers.region}
-
-      # Wait for resources to be deleted
-      sleep 600
-    EOT
-  }
-  depends_on = [null_resource.delete_eks_resources]
 }
 
 resource "aws_db_parameter_group" "custom_pg" {
@@ -322,11 +316,43 @@ resource "aws_sqs_queue" "aether" {
   name = var.sqs_queue_name
 }
 
-resource "aws_ecr_repository" "aether" {
-  name                 = var.ecr_repository_name
+resource "aws_ecr_repository" "forge" {
+  name                 = var.ecr_forge_repository_name
   image_tag_mutability = "MUTABLE"
   tags = {
-    Name = var.ecr_repository_name
+    Name = var.ecr_forge_repository_name
+  }
+}
+
+resource "aws_ecr_repository" "frontstage" {
+  name                 = var.ecr_frontstage_repository_name
+  image_tag_mutability = "MUTABLE"
+  tags = {
+    Name = var.ecr_frontstage_repository_name
+  }
+}
+
+resource "aws_ecr_repository" "launchpad" {
+  name                 = var.ecr_launchpad_repository_name
+  image_tag_mutability = "MUTABLE"
+  tags = {
+    Name = var.ecr_launchpad_repository_name
+  }
+}
+
+resource "aws_ecr_repository" "logify" {
+  name                 = var.ecr_logify_repository_name
+  image_tag_mutability = "MUTABLE"
+  tags = {
+    Name = var.ecr_logify_repository_name
+  }
+}
+
+resource "aws_ecr_repository" "proxy" {
+  name                 = var.ecr_proxy_repository_name
+  image_tag_mutability = "MUTABLE"
+  tags = {
+    Name = var.ecr_proxy_repository_name
   }
 }
 

@@ -34,8 +34,28 @@ variable "sqs_queue_name" {
   type        = string
 }
 
-variable "ecr_repository_name" {
-  description = "Name of the ECR repository"
+variable "ecr_forge_repository_name" {
+  description = "Name of the forge ECR repository"
+  type        = string
+}
+
+variable "ecr_frontstage_repository_name" {
+  description = "Name of the frontstage ECR repository"
+  type        = string
+}
+
+variable "ecr_launchpad_repository_name" {
+  description = "Name of the launchpad ECR repository"
+  type        = string
+}
+
+variable "ecr_logify_repository_name" {
+  description = "Name of the logify ECR repository"
+  type        = string
+}
+
+variable "ecr_proxy_repository_name" {
+  description = "Name of the proxy ECR repository"
   type        = string
 }
 
@@ -70,4 +90,19 @@ variable "ssh_private_key_path" {
   description = "Path to the SSH private key file"
   type        = string
   sensitive   = true
+}
+
+variable "aws_access_key_id" {
+  type      = string
+  sensitive = true
+}
+
+variable "aws_secret_access_key" {
+  type      = string
+  sensitive = true
+}
+
+variable "aws_session_token" {
+  type      = string
+  sensitive = true
 }

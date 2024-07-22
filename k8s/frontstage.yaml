@@ -21,7 +21,6 @@ spec:
       containers:
         - name: frontstage
           image: vsramchaik/aether-frontstage:latest
-          # imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
           env:

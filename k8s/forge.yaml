@@ -12,10 +12,7 @@ spec:
     metadata:
       labels:
         app: forge
-      annotations:
-        eks.amazonaws.com/role-arn: arn:aws:iam::502413910473:role/LabRole
     spec:
-      serviceAccountName: default
       nodeSelector:
         node-group: forge
       hostPID: true
@@ -48,21 +45,21 @@ spec:
               value: "launchpad-service:50051"
             - name: LOGS_GRPC_SERVER_ADDRESS
               value: "logify-service:50051"
-            # - name: AWS_ACCESS_KEY_ID
-            #   valueFrom:
-            #     secretKeyRef:
-            #       name: aws-credentials
-            #       key: AWS_ACCESS_KEY_ID
-            # - name: AWS_SECRET_ACCESS_KEY
-            #   valueFrom:
-            #     secretKeyRef:
-            #       name: aws-credentials
-            #       key: AWS_SECRET_ACCESS_KEY
-            # - name: AWS_SESSION_TOKEN
-            #   valueFrom:
-            #     secretKeyRef:
-            #       name: aws-credentials
-            #       key: AWS_SESSION_TOKEN
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_SESSION_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: aws-credentials
+                  key: AWS_SESSION_TOKEN
 
 ---
 apiVersion: v1
