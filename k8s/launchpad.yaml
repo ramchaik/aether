@@ -76,25 +76,25 @@ spec:
             - "-c"
             - |
               echo "Starting fetch-proxy-ip init container"
-              PROXY_IP=$(kubectl get svc proxy-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+              PROXY_IP=$(kubectl get svc proxy-service -n aether -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
               echo "Initial PROXY_IP value: $PROXY_IP"
 
               ATTEMPT=1
               while [ -z "$PROXY_IP" ]; do
                 echo "Attempt $ATTEMPT: PROXY_IP is empty, waiting 5 seconds before retry"
                 sleep 5
-                PROXY_IP=$(kubectl get svc proxy-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+                PROXY_IP=$(kubectl get svc proxy-service -n aether -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
                 echo "Attempt $ATTEMPT: New PROXY_IP value: $PROXY_IP"
                 ATTEMPT=$((ATTEMPT+1))
               done
 
               echo "PROXY_IP found: $PROXY_IP"
               echo "Creating/updating ConfigMap proxy-ip-config"
-              kubectl create configmap proxy-ip-config --from-literal=PROXY_IP=$PROXY_IP -o yaml --dry-run=client | kubectl apply -f -
+              kubectl create configmap proxy-ip-config --from-literal=PROXY_IP=$PROXY_IP -n aether -o yaml --dry-run=client | kubectl apply -f -
 
               echo "ConfigMap creation/update command executed"
               echo "Verifying ConfigMap content:"
-              kubectl get configmap proxy-ip-config -o yaml
+              kubectl get configmap proxy-ip-config -n aether -o yaml
 
               echo "fetch-proxy-ip init container completed"
       containers:
