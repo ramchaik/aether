@@ -9,9 +9,6 @@ resource "aws_vpc" "main" {
   tags = {
     Name = "main-vpc"
   }
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 resource "aws_subnet" "public" {
@@ -23,9 +20,6 @@ resource "aws_subnet" "public" {
   tags = {
     Name = "public-subnet-${count.index + 1}"
   }
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 resource "aws_subnet" "private" {
@@ -35,9 +29,6 @@ resource "aws_subnet" "private" {
   availability_zone = data.aws_availability_zones.available.names[count.index]
   tags = {
     Name = "private-subnet-${count.index + 1}"
-  }
-  lifecycle {
-    create_before_destroy = true
   }
 }
 
@@ -61,9 +52,6 @@ resource "aws_route_table_association" "public" {
 
 resource "aws_eip" "nat" {
   domain = "vpc"
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 resource "aws_nat_gateway" "main" {
@@ -72,45 +60,6 @@ resource "aws_nat_gateway" "main" {
 
   depends_on = [aws_internet_gateway.main]
 
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "null_resource" "vpc_cleanup" {
-  triggers = {
-    vpc_id = aws_vpc.main.id
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<-EOT
-      ./cleanup.sh ${self.triggers.vpc_id}
-      
-      # Retry logic for VPC deletion
-      for i in {1..5}; do
-        if aws ec2 delete-vpc --vpc-id ${self.triggers.vpc_id}; then
-          echo "VPC deleted successfully"
-          exit 0
-        else
-          echo "VPC deletion failed, retrying in 30 seconds..."
-          sleep 30
-        fi
-      done
-      echo "Failed to delete VPC after 5 attempts"
-      exit 1
-    EOT
-  }
-
-  depends_on = [
-    aws_eks_cluster.main,
-    aws_eks_node_group.general,
-    aws_eks_node_group.forge,
-    aws_nat_gateway.main,
-    aws_internet_gateway.main,
-    aws_subnet.public,
-    aws_subnet.private
-  ]
 }
 
 resource "aws_route_table" "private" {
@@ -221,28 +170,6 @@ resource "kubernetes_secret" "clerk_keys" {
   }
 
   depends_on = [kubernetes_namespace.aether]
-}
-
-resource "null_resource" "delete_eks_resources" {
-  triggers = {
-    cluster_name = aws_eks_cluster.main.name
-    region       = var.region
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<-EOT
-      aws eks update-kubeconfig --name ${self.triggers.cluster_name} --region ${self.triggers.region}
-      kubectl delete services --all
-      kubectl delete deployments --all
-      kubectl delete pods --all
-      kubectl delete daemonsets --all
-      kubectl get svc --all-namespaces -o json | jq -r '.items[] | select(.spec.type=="LoadBalancer") | .metadata.name' | xargs -I {} kubectl delete svc {}
-      sleep 300  # Increased wait time for EKS resources to be deleted
-    EOT
-  }
-
-  depends_on = [aws_eks_node_group.general, aws_eks_node_group.forge]
 }
 
 resource "aws_db_parameter_group" "custom_pg" {
@@ -378,46 +305,6 @@ resource "aws_s3_bucket_public_access_block" "aether" {
 
 resource "aws_sqs_queue" "aether" {
   name = var.sqs_queue_name
-}
-
-resource "aws_ecr_repository" "forge" {
-  name                 = var.ecr_forge_repository_name
-  image_tag_mutability = "MUTABLE"
-  tags = {
-    Name = var.ecr_forge_repository_name
-  }
-}
-
-resource "aws_ecr_repository" "frontstage" {
-  name                 = var.ecr_frontstage_repository_name
-  image_tag_mutability = "MUTABLE"
-  tags = {
-    Name = var.ecr_frontstage_repository_name
-  }
-}
-
-resource "aws_ecr_repository" "launchpad" {
-  name                 = var.ecr_launchpad_repository_name
-  image_tag_mutability = "MUTABLE"
-  tags = {
-    Name = var.ecr_launchpad_repository_name
-  }
-}
-
-resource "aws_ecr_repository" "logify" {
-  name                 = var.ecr_logify_repository_name
-  image_tag_mutability = "MUTABLE"
-  tags = {
-    Name = var.ecr_logify_repository_name
-  }
-}
-
-resource "aws_ecr_repository" "proxy" {
-  name                 = var.ecr_proxy_repository_name
-  image_tag_mutability = "MUTABLE"
-  tags = {
-    Name = var.ecr_proxy_repository_name
-  }
 }
 
 resource "aws_kinesis_stream" "aether" {
@@ -593,11 +480,71 @@ resource "aws_lambda_function" "kinesis_consumer" {
     security_group_ids = [aws_security_group.lambda.id]
   }
 
-  depends_on = [null_resource.lambda_zip]
+  depends_on = [
+    null_resource.lambda_zip,
+    aws_security_group.lambda,
+    aws_subnet.private
+  ]
 }
 
 resource "aws_lambda_event_source_mapping" "kinesis_trigger" {
   event_source_arn  = aws_kinesis_stream.aether.arn
   function_name     = aws_lambda_function.kinesis_consumer.function_name
   starting_position = "LATEST"
+}
+
+resource "null_resource" "delete_eks_resources" {
+  triggers = {
+    cluster_name = aws_eks_cluster.main.name
+    region       = var.region
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      aws eks update-kubeconfig --name ${self.triggers.cluster_name} --region ${self.triggers.region}
+      kubectl delete services --all
+      kubectl delete deployments --all
+      kubectl delete pods --all
+      kubectl delete daemonsets --all
+      kubectl get svc --all-namespaces -o json | jq -r '.items[] | select(.spec.type=="LoadBalancer") | .metadata.name' | xargs -I {} kubectl delete svc {}
+      sleep 300  # Increased wait time for EKS resources to be deleted
+    EOT
+  }
+
+  depends_on = [aws_eks_node_group.general, aws_eks_node_group.forge]
+}
+
+resource "null_resource" "vpc_cleanup" {
+  triggers = {
+    vpc_id = aws_vpc.main.id
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<-EOT
+      ./cleanup.sh ${self.triggers.vpc_id} us-east-1
+      
+      # Retry logic for VPC deletion
+      for i in {1..5}; do
+        if aws ec2 delete-vpc --vpc-id ${self.triggers.vpc_id} --region us-east-1; then
+          echo "VPC deleted successfully"
+          exit 0
+        else
+          echo "VPC deletion failed, retrying in 30 seconds..."
+          sleep 30
+        fi
+      done
+      echo "Failed to delete VPC after 5 attempts"
+      #exit 1
+    EOT
+  }
+
+  depends_on = [
+    null_resource.delete_eks_resources,
+    aws_nat_gateway.main,
+    aws_internet_gateway.main,
+    aws_subnet.public,
+    aws_subnet.private
+  ]
 }
