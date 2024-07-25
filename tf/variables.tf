@@ -34,31 +34,6 @@ variable "sqs_queue_name" {
   type        = string
 }
 
-variable "ecr_forge_repository_name" {
-  description = "Name of the forge ECR repository"
-  type        = string
-}
-
-variable "ecr_frontstage_repository_name" {
-  description = "Name of the frontstage ECR repository"
-  type        = string
-}
-
-variable "ecr_launchpad_repository_name" {
-  description = "Name of the launchpad ECR repository"
-  type        = string
-}
-
-variable "ecr_logify_repository_name" {
-  description = "Name of the logify ECR repository"
-  type        = string
-}
-
-variable "ecr_proxy_repository_name" {
-  description = "Name of the proxy ECR repository"
-  type        = string
-}
-
 variable "kinesis_stream_name" {
   description = "Name of the Kinesis stream"
   type        = string
