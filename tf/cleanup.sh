@@ -11,6 +11,24 @@ AWS_REGION=$2
 
 echo "Starting cleanup for VPC: $VPC_ID in region: $AWS_REGION"
 
+# Function to delete Classic Load Balancers
+delete_classic_load_balancers() {
+  classic_lbs=$(aws elb describe-load-balancers --query "LoadBalancerDescriptions[?VPCId=='$VPC_ID'].LoadBalancerName" --output text --region "$AWS_REGION")
+  for lb in $classic_lbs; do
+    echo "Deleting Classic Load Balancer: $lb"
+    aws elb delete-load-balancer --load-balancer-name $lb --region "$AWS_REGION"
+  done
+}
+
+# Function to delete Application and Network Load Balancers
+delete_alb_nlb() {
+  alb_nlb=$(aws elbv2 describe-load-balancers --query "LoadBalancers[?VpcId=='$VPC_ID'].LoadBalancerArn" --output text --region "$AWS_REGION")
+  for lb in $alb_nlb; do
+    echo "Deleting Application/Network Load Balancer: $lb"
+    aws elbv2 delete-load-balancer --load-balancer-arn $lb --region "$AWS_REGION"
+  done
+}
+
 # Function to delete NAT Gateways
 delete_nat_gateways() {
   nat_gateways=$(aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=$VPC_ID" --query 'NatGateways[*].NatGatewayId' --output text --region "$AWS_REGION")
@@ -53,7 +71,19 @@ delete_subnets() {
   done
 }
 
+# Function to delete VPC
+delete_vpc() {
+  echo "Deleting VPC: $VPC_ID"
+  aws ec2 delete-vpc --vpc-id $VPC_ID --region "$AWS_REGION"
+}
+
 # Main cleanup process
+echo "Deleting Classic Load Balancers..."
+delete_classic_load_balancers
+
+echo "Deleting Application and Network Load Balancers..."
+delete_alb_nlb
+
 echo "Deleting NAT Gateways..."
 delete_nat_gateways
 
@@ -66,12 +96,7 @@ delete_internet_gateways
 echo "Deleting Subnets..."
 delete_subnets
 
-# Function to delete VPC
-delete_vpc() {
-  echo "Deleting VPC: $VPC_ID"
-  aws ec2 delete-vpc --vpc-id $VPC_ID --region "$AWS_REGION"
-}
-
+echo "Deleting VPC..."
 delete_vpc
 
 echo "Cleanup process completed for VPC: $VPC_ID in region: $AWS_REGION"
