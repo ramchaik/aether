@@ -2,8 +2,8 @@
 
 Aether is a minimalist PaaS (Platform as a Service) offering, inspired by Vercel and Netlify. It allows you to deploy your npm projects effortlessly by simply providing a public repository URL.
 
-## Architecture Diagram
-![Aether architecture](docs/aether-architecture.png)
+## Demo 🎥
+![DEMO](docs/aether-demo.gif)
 
 ## Features ✨
 
@@ -35,6 +35,10 @@ Aether is a minimalist PaaS (Platform as a Service) offering, inspired by Vercel
 4. **Logify**: Go app for log streaming and aggregation, uses gRPC for communication with other services
 5. **Proxy**: Go app serving as a reverse proxy for deployed projects
 
+## Architecture Diagram
+![Aether architecture](docs/aether-architecture.png)
+
+
 ## Project Structure 📁
 
 ```
@@ -50,10 +54,8 @@ Aether is a minimalist PaaS (Platform as a Service) offering, inspired by Vercel
 └── protobuf
 ```
 
-<!-- ## Demo 🎥
-TODO: add demo  -->
-
 <!-- ## Getting Started 🏁
+
 
 TODO: add instruction here -->
 
