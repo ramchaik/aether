@@ -45,10 +45,18 @@ spec:
               value: aether
             - name: DB_DATABASE
               value: aether-logs
+            - name: DB_DATABASE
+              value: aether-logs
             - name: DB_USERNAME
-              value: vaibhavadmin
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_USERNAME
             - name: DB_PASSWORD
-              value: vaibhavadmin
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD
             - name: DB_PORT
               value: "5432"
             - name: DB_HOST

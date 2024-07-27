@@ -548,3 +548,17 @@ resource "null_resource" "vpc_cleanup" {
     aws_subnet.private
   ]
 }
+
+resource "kubernetes_secret" "db_credentials" {
+  metadata {
+    name      = "db-credentials"
+    namespace = "aether"
+  }
+
+  data = {
+    DB_USERNAME = var.db_username
+    DB_PASSWORD = var.db_password
+  }
+
+  depends_on = [kubernetes_namespace.aether]
+}
