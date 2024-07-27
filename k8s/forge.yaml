@@ -25,10 +25,10 @@ spec:
             - containerPort: 8080
           resources:
             requests:
-              cpu: "750m"
+              cpu: "550m"
               memory: "512Mi"
             limits:
-              cpu: "1200m"
+              cpu: "800m"
               memory: "1Gi"
           env:
             - name: APP_ENV
@@ -75,3 +75,17 @@ spec:
       port: 80
       targetPort: 8080
   type: ClusterIP
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: forge-hpa
+  namespace: aether
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: forge-deployment
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 50

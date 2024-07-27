@@ -79,3 +79,17 @@ spec:
       port: 80
       targetPort: 3000
   type: LoadBalancer
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: frontstage-hpa
+  namespace: aether
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: frontstage-deployment
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 50

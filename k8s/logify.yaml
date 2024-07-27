@@ -4,7 +4,7 @@ metadata:
   name: logify-deployment
   namespace: aether
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: logify
@@ -88,3 +88,17 @@ spec:
       port: 50051
       targetPort: 50051
   type: ClusterIP
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: logify-hpa
+  namespace: aether
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: logify-deployment
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 50

@@ -165,3 +165,17 @@ spec:
       port: 50051
       targetPort: 50051
   type: ClusterIP
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: launchpad-hpa
+  namespace: aether
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: launchpad-deployment
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 50
