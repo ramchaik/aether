@@ -97,7 +97,7 @@ spec:
       targetPort: 50051
   type: ClusterIP
 ---
-apiVersion: autoscaling/v1
+apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: logify-hpa
@@ -109,4 +109,10 @@ spec:
     name: logify-deployment
   minReplicas: 1
   maxReplicas: 2
-  targetCPUUtilizationPercentage: 50
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50

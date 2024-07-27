@@ -80,7 +80,7 @@ spec:
       targetPort: 3000
   type: LoadBalancer
 ---
-apiVersion: autoscaling/v1
+apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: frontstage-hpa
@@ -92,4 +92,10 @@ spec:
     name: frontstage-deployment
   minReplicas: 1
   maxReplicas: 1
-  targetCPUUtilizationPercentage: 50
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 50
