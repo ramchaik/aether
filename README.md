@@ -12,6 +12,8 @@ Aether is a minimalist PaaS (Platform as a Service) offering, inspired by Vercel
 - Real-time log streaming
 - Serverless architecture
 - Microservices-based design
+- Efficient inter-service communication using gRPC
+- Intelligent auto-scaling with HPA and KEDA
 
 ## Tech Stack 🛠️
 
@@ -26,6 +28,8 @@ Aether is a minimalist PaaS (Platform as a Service) offering, inspired by Vercel
 - **CI/CD**: GitHub Actions, ArgoCD
 - **Infrastructure as Code**: Terraform
 - **Cloud Provider**: AWS
+- **Inter-service Communication**: gRPC, Protocol Buffers
+- **Auto-scaling**: Horizontal Pod Autoscaler (HPA), KEDA
 
 ## Microservices 🌐
 
@@ -74,6 +78,15 @@ Kubernetes manifests for deploying to AWS EKS are located in the `k8s` folder.
 ## Inter-service Communication 🔀
 
 Aether utilizes gRPC with Protocol Buffers for efficient and type-safe communication between microservices. This ensures high performance and maintainability across the system.
+
+## Auto-scaling ⚖️
+
+Aether implements intelligent auto-scaling to ensure optimal resource utilization and responsiveness:
+
+- **Horizontal Pod Autoscaler (HPA)**: Most pods use CPU metrics for scaling, ensuring efficient resource usage across the cluster.
+- **KEDA (Kubernetes Event-driven Autoscaling)**: The Forge service utilizes KEDA with AWS SQS triggers, allowing it to scale based on the number of messages in the queue. This ensures rapid processing of build requests during high-demand periods.
+
+This combination of HPA and KEDA allows Aether to dynamically adjust to varying workloads, maintaining performance while optimizing resource consumption.
 
 ## Contributing 🤝
 
