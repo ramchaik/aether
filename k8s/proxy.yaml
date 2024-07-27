@@ -14,7 +14,7 @@ spec:
         app: proxy
     spec:
       nodeSelector:
-        node-group: general
+        node-group: forge
       containers:
         - name: proxy-container
           image: vsramchaik/aether-proxy:latest
@@ -25,8 +25,8 @@ spec:
               cpu: "250m"
               memory: "250Mi"
             limits:
-              cpu: "500m"
-              memory: "512Mi"
+              cpu: "300m"
+              memory: "300Mi"
           env:
             - name: BUCKET_BASE_PATH
               value: https://aether-bucket.s3.amazonaws.com/projects
