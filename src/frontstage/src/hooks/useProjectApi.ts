@@ -134,7 +134,7 @@ export function useFetchAllProjects<T>() {
   });
 }
 
-export function useFetchProject<T>(projectId: string) {
+export function useFetchProject<T>(projectId: string, options = {}) {
   const { getToken } = useAuth();
 
   return useQuery<T>({
@@ -145,6 +145,7 @@ export function useFetchProject<T>(projectId: string) {
     },
     // Only fetch when projectId is available
     enabled: !!projectId,
+    ...options,
   });
 }
 

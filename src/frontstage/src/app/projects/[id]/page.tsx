@@ -1,42 +1,43 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import Error from "@/components/error";
+import Loader from "@/components/loader";
 import {
-  Card,
-  CardBody,
-  CardHeader,
-  Divider,
-  Chip,
-  Button,
-  Tooltip,
-  Progress,
-  CircularProgress,
-  ScrollShadow,
-} from "@nextui-org/react";
-import { AnimatePresence, motion } from "framer-motion";
-import { useParams } from "next/navigation";
-import {
-  deployProject,
   useDeployProject,
   useFetchProject,
   useFetchProjectLogs,
 } from "@/hooks/useProjectApi";
 import { Project } from "@/store/useProjectStore";
-import { CheckIcon, ClockIcon } from "@heroicons/react/24/solid";
+import { CheckIcon } from "@heroicons/react/24/solid";
+import {
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Chip,
+  CircularProgress,
+  Divider,
+  ScrollShadow,
+  Tooltip,
+} from "@nextui-org/react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useParams } from "next/navigation";
+import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import Loader from "@/components/loader";
-import Error from "@/components/error";
 
 const ProjectDetailPage: React.FC = () => {
   const params = useParams();
+  const [isPolling, setIsPolling] = useState(false);
+
   const projectId = params.id as string;
   const {
     data: project,
     isLoading,
     error,
-  } = useFetchProject<Project>(projectId);
-
-  const [isPolling, setIsPolling] = useState(false);
+    refetch: refetchProject,
+  } = useFetchProject<Project>(projectId, {
+    refetchInterval: isPolling ? 5000 : false, // Poll every 5 seconds if isPolling is true
+  });
 
   const {
     data: logs,
@@ -44,18 +45,22 @@ const ProjectDetailPage: React.FC = () => {
     error: logsError,
     refetch: refetchLogs,
   } = useFetchProjectLogs<any>(projectId, {
-    enabled: false, // Disable automatic fetching
     refetchInterval: isPolling ? 5000 : false, // Poll every 5 seconds if isPolling is true
   });
 
   useEffect(() => {
     if (project?.status === "DEPLOYING") {
       setIsPolling(true);
-      refetchLogs(); // Start fetching logs
     } else {
       setIsPolling(false);
     }
-  }, [project?.status, refetchLogs]);
+  }, [project?.status]);
+
+  useEffect(() => {
+    if (projectId) {
+      refetchLogs();
+    }
+  }, [projectId, refetchLogs]);
 
   const deployProjectMutation = useDeployProject();
   const [isDeploying, setIsDeploying] = useState(false);

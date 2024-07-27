@@ -1,5 +1,3 @@
-// components/Loader.tsx
-
 import React from "react";
 import { Spinner } from "@nextui-org/react";
 import { motion } from "framer-motion";
