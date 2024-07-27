@@ -97,22 +97,24 @@ spec:
       targetPort: 50051
   type: ClusterIP
 ---
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
 metadata:
-  name: logify-hpa
+  name: logify-scaledobject
   namespace: aether
 spec:
   scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
     name: logify-deployment
-  minReplicas: 1
-  maxReplicas: 2
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 50
+  pollingInterval: 15 # Check each trigger every 15 seconds
+  cooldownPeriod: 300 # Wait 5 minutes before scaling down
+  minReplicaCount: 1 # Minimum number of replicas
+  maxReplicaCount: 5 # Maximum number of replicas
+  triggers:
+    - type: cpu
+      metadata:
+        type: Utilization
+        value: "50"
+    - type: memory
+      metadata:
+        type: Utilization
+        value: "70"

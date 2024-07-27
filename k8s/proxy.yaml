@@ -65,22 +65,20 @@ spec:
       targetPort: 9000
   type: LoadBalancer
 ---
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
 metadata:
-  name: proxy-hpa
+  name: proxy-scaledobject
   namespace: aether
 spec:
   scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
     name: proxy-deployment
-  minReplicas: 1
-  maxReplicas: 2
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 50
+  pollingInterval: 15 # Check each trigger every 15 seconds
+  cooldownPeriod: 300 # Wait 5 minutes before scaling down
+  minReplicaCount: 1 # Minimum number of replicas
+  maxReplicaCount: 2 # Maximum number of replicas
+  triggers:
+    - type: cpu
+      metadata:
+        type: Utilization
+        value: "50"

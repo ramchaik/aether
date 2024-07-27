@@ -76,22 +76,20 @@ spec:
       targetPort: 8080
   type: ClusterIP
 ---
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
 metadata:
-  name: forge-hpa
+  name: forge-scaled-object
   namespace: aether
 spec:
   scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
     name: forge-deployment
-  minReplicas: 1
-  maxReplicas: 2
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 50
+  triggers:
+    - type: aws-sqs-queue
+      metadata:
+        queueName: "aether"
+        queueLength: "10"
+        awsRegion: "us-east-1"
+        awsAccountID: "502413910473"
+  minReplicaCount: 1
+  maxReplicaCount: 2

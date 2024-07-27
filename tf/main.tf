@@ -562,3 +562,24 @@ resource "kubernetes_secret" "db_credentials" {
 
   depends_on = [kubernetes_namespace.aether]
 }
+
+resource "helm_release" "keda" {
+  name             = "keda"
+  repository       = "https://kedacore.github.io/charts"
+  chart            = "keda"
+  namespace        = "keda"
+  create_namespace = true
+  version          = "2.9.0"
+
+  set {
+    name  = "rbac.create"
+    value = "true"
+  }
+
+  set {
+    name  = "serviceAccount.create"
+    value = "true"
+  }
+
+  depends_on = [aws_eks_node_group.general, aws_eks_node_group.forge]
+}
