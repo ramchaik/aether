@@ -133,7 +133,6 @@ resource "kubernetes_namespace" "aether" {
   }
 
   depends_on = [
-    aws_eks_cluster.main,
     aws_eks_node_group.general,
     aws_eks_node_group.forge
   ]
@@ -213,8 +212,6 @@ resource "aws_security_group" "lambda" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  depends_on = [null_resource.vpc_cleanup]
 }
 
 resource "aws_security_group" "rds" {
@@ -244,8 +241,11 @@ resource "aws_security_group" "rds" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+}
 
-  depends_on = [null_resource.vpc_cleanup]
+resource "aws_kms_key" "rds_encryption_key" {
+  description             = "KMS key for RDS encryption"
+  deletion_window_in_days = 7
 }
 
 resource "aws_db_instance" "main" {
@@ -260,6 +260,9 @@ resource "aws_db_instance" "main" {
   password             = var.db_password
   parameter_group_name = aws_db_parameter_group.custom_pg.name
   skip_final_snapshot  = true
+
+  storage_encrypted = true
+  kms_key_id        = aws_kms_key.rds_encryption_key.arn
 
   vpc_security_group_ids = [aws_security_group.rds.id, aws_security_group.lambda.id]
   db_subnet_group_name   = aws_db_subnet_group.main.name
@@ -491,62 +494,6 @@ resource "aws_lambda_event_source_mapping" "kinesis_trigger" {
   event_source_arn  = aws_kinesis_stream.aether.arn
   function_name     = aws_lambda_function.kinesis_consumer.function_name
   starting_position = "LATEST"
-}
-
-resource "null_resource" "delete_eks_resources" {
-  triggers = {
-    cluster_name = aws_eks_cluster.main.name
-    region       = var.region
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<-EOT
-      aws eks update-kubeconfig --name ${self.triggers.cluster_name} --region ${self.triggers.region}
-      kubectl delete services --all
-      kubectl delete deployments --all
-      kubectl delete pods --all
-      kubectl delete daemonsets --all
-      kubectl get svc --all-namespaces -o json | jq -r '.items[] | select(.spec.type=="LoadBalancer") | .metadata.name' | xargs -I {} kubectl delete svc {}
-      sleep 300  # Increased wait time for EKS resources to be deleted
-    EOT
-  }
-
-  depends_on = [aws_eks_node_group.general, aws_eks_node_group.forge]
-}
-
-resource "null_resource" "vpc_cleanup" {
-  triggers = {
-    vpc_id = aws_vpc.main.id
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<-EOT
-      ./cleanup.sh ${self.triggers.vpc_id} us-east-1
-      
-      # Retry logic for VPC deletion
-      for i in {1..5}; do
-        if aws ec2 delete-vpc --vpc-id ${self.triggers.vpc_id} --region us-east-1; then
-          echo "VPC deleted successfully"
-          exit 0
-        else
-          echo "VPC deletion failed, retrying in 30 seconds..."
-          sleep 30
-        fi
-      done
-      echo "Failed to delete VPC after 5 attempts"
-      #exit 1
-    EOT
-  }
-
-  depends_on = [
-    null_resource.delete_eks_resources,
-    aws_nat_gateway.main,
-    aws_internet_gateway.main,
-    aws_subnet.public,
-    aws_subnet.private
-  ]
 }
 
 resource "kubernetes_secret" "db_credentials" {
