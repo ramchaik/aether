@@ -62,10 +62,14 @@ const ProjectDetailPage: React.FC = () => {
         return newLogsSet;
       });
 
-      // Scroll to the bottom of the log container
+      // Scroll to the bottom of the log container smoothly
       if (logContainerRef.current) {
         logContainerRef.current.scrollTop =
           logContainerRef.current.scrollHeight;
+        logContainerRef.current.scrollIntoView({
+          behavior: "smooth",
+          block: "end",
+        });
       }
     }
   }, [logSet, logs]);
