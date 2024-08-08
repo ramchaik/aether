@@ -22,13 +22,14 @@ import {
 } from "@nextui-org/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 const ProjectDetailPage: React.FC = () => {
   const params = useParams();
   const [isPolling, setIsPolling] = useState(false);
   const [logs, setLogs] = useState<any[]>([]);
+  const logContainerRef = useRef<HTMLDivElement>(null);
 
   const projectId = params.id as string;
   const {
@@ -51,18 +52,29 @@ const ProjectDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (logSet && logSet.length > 0) {
-      const uniqueLogs = logSet.filter((newLog: { log: string; }, index: number) => {
-        return !logs.some((existingLog, existingIndex) => {
-          try {
-            const parsedNewLog = JSON.parse(newLog.log);
-            const parsedExistingLog = JSON.parse(existingLog.log);
-            return parsedNewLog.stream === parsedExistingLog.stream && index === existingIndex;
-          } catch {
-            return newLog.log === existingLog.log && index === existingIndex;
-          }
-        });
-      });
+      const uniqueLogs = logSet.filter(
+        (newLog: { log: string }, index: number) => {
+          return !logs.some((existingLog, existingIndex) => {
+            try {
+              const parsedNewLog = JSON.parse(newLog.log);
+              const parsedExistingLog = JSON.parse(existingLog.log);
+              return (
+                parsedNewLog.stream === parsedExistingLog.stream &&
+                index === existingIndex
+              );
+            } catch {
+              return newLog.log === existingLog.log && index === existingIndex;
+            }
+          });
+        }
+      );
       setLogs((prevLogs) => prevLogs.concat(uniqueLogs));
+
+      // Scroll to the bottom of the log container
+      if (logContainerRef.current) {
+        logContainerRef.current.scrollTop =
+          logContainerRef.current.scrollHeight;
+      }
     }
   }, [logSet, logs]);
 
@@ -242,7 +254,7 @@ const ProjectDetailPage: React.FC = () => {
           <Divider />
           <CardBody>
             <ScrollShadow className="h-[400px]">
-              <div className="bg-gray-100 p-4 rounded-lg">
+              <div className="bg-gray-100 p-4 rounded-lg" ref={logContainerRef}>
                 <AnimatePresence>
                   {logs && logs.length > 0 ? (
                     logs.map((log: any, index: number) => (
