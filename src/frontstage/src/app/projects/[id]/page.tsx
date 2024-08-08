@@ -50,7 +50,7 @@ const ProjectDetailPage: React.FC = () => {
   });
 
   useEffect(() => {
-    if (logSet.length) {
+    if (logSet && logSet.length > 0) {
       const uniqueLogs = logSet.filter((newLog: { log: string; }, index: number) => {
         return !logs.some((existingLog, existingIndex) => {
           try {
