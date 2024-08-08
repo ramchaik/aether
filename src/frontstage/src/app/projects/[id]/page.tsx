@@ -22,13 +22,13 @@ import {
 } from "@nextui-org/react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useParams } from "next/navigation";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 const ProjectDetailPage: React.FC = () => {
   const params = useParams();
   const [isPolling, setIsPolling] = useState(false);
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs] = useState<Set<any>>(new Set());
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   const projectId = params.id as string;
@@ -52,23 +52,15 @@ const ProjectDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (logSet && logSet.length > 0) {
-      const uniqueLogs = logSet.filter(
-        (newLog: { log: string }, index: number) => {
-          return !logs.some((existingLog, existingIndex) => {
-            try {
-              const parsedNewLog = JSON.parse(newLog.log);
-              const parsedExistingLog = JSON.parse(existingLog.log);
-              return (
-                parsedNewLog.stream === parsedExistingLog.stream &&
-                index === existingIndex
-              );
-            } catch {
-              return newLog.log === existingLog.log && index === existingIndex;
-            }
-          });
-        }
-      );
-      setLogs((prevLogs) => prevLogs.concat(uniqueLogs));
+      const uniqueLogs = logSet.filter((newLog: any, index: any) => {
+        return !logs.has(newLog);
+      });
+
+      setLogs((prevLogs) => {
+        const newLogsSet = new Set(prevLogs);
+        uniqueLogs.forEach((log: any) => newLogsSet.add(log));
+        return newLogsSet;
+      });
 
       // Scroll to the bottom of the log container
       if (logContainerRef.current) {
@@ -94,6 +86,17 @@ const ProjectDetailPage: React.FC = () => {
 
   const deployProjectMutation = useDeployProject();
   const [isDeploying, setIsDeploying] = useState(false);
+
+  const parseLogData = useMemo(() => {
+    return (log: any) => {
+      try {
+        const parsedLog = JSON.parse(log.log);
+        return parsedLog.stream || log.log;
+      } catch {
+        return log.log;
+      }
+    };
+  }, []);
 
   const StatusIndicator = ({ status }: { status: Project["status"] }) => {
     switch (status) {
@@ -256,8 +259,8 @@ const ProjectDetailPage: React.FC = () => {
             <ScrollShadow className="h-[400px]">
               <div className="bg-gray-100 p-4 rounded-lg" ref={logContainerRef}>
                 <AnimatePresence>
-                  {logs && logs.length > 0 ? (
-                    logs.map((log: any, index: number) => (
+                  {logs && logs.size > 0 ? (
+                    Array.from(logs).map((log: any, index: number) => (
                       <motion.div
                         key={index}
                         initial={{ opacity: 0, y: 20 }}
@@ -269,16 +272,7 @@ const ProjectDetailPage: React.FC = () => {
                         <span className="text-gray-500 mr-2">
                           {new Date(log.timestamp).toLocaleTimeString()}
                         </span>
-                        <span>
-                          {(() => {
-                            try {
-                              const parsedLog = JSON.parse(log.log);
-                              return parsedLog.stream || log.log;
-                            } catch {
-                              return log.log;
-                            }
-                          })()}
-                        </span>
+                        <span>{parseLogData(log)}</span>
                       </motion.div>
                     ))
                   ) : (
