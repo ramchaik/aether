@@ -2,6 +2,7 @@ package main
 
 import (
 	"forge/internal"
+	"forge/internal/monitor"
 	"forge/internal/service"
 	"forge/internal/worker"
 	"log"
@@ -11,6 +12,9 @@ import (
 )
 
 func main() {
+	// Start the metrics server in a separate goroutine
+	go monitor.StartMetricsServer()
+
 	appEnv := os.Getenv("APP_ENV")
 	if appEnv == "local" {
 		if err := godotenv.Load(); err != nil {

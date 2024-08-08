@@ -67,6 +67,10 @@ kind: Service
 metadata:
   name: forge-service
   namespace: aether
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+    prometheus.io/port: "8080"
 spec:
   selector:
     app: forge

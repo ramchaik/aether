@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	pb "forge/internal/genprotobuf/project"
+	"forge/internal/monitor"
 	"forge/internal/service"
 	"forge/internal/utils"
 	"log"
@@ -128,6 +129,9 @@ func Run(
 			if err != nil {
 				log.Printf("DeleteMessage Failed %v", err)
 			}
+
+			// Increment the metric when a message is processed
+			monitor.ProcessedMessages.WithLabelValues("success").Inc()
 		}
 	}
 }
