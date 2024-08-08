@@ -42,12 +42,12 @@ Aether is a minimalist PaaS (Platform as a Service) offering, inspired by Vercel
 5. **Proxy**: Go app serving as a reverse proxy for deployed projects
 
 ## Architecture Diagram
-![Aether architecture](docs/aether-architecture.png)
 
+![Aether architecture](docs/aether-architecture.png)
 
 ## Project Structure 📁
 
-```
+```sh
 ├── src
 │   ├── frontstage
 │   ├── launchpad
@@ -91,8 +91,8 @@ Aether implements intelligent auto-scaling to ensure optimal resource utilizatio
 This combination of HPA and KEDA allows Aether to dynamically adjust to varying workloads, maintaining performance while optimizing resource consumption.
 
 ## Monitoring 🔍
-Aether uses Prometheus for collecting and storing metrics, and Grafana for visualizing and analyzing the collected metrics.
 
+Aether uses Prometheus for collecting and storing metrics, and Grafana for visualizing and analyzing the collected metrics.
 
 ## Contributing 🤝
 
