@@ -339,6 +339,7 @@ resource "helm_release" "reloader" {
   depends_on = [aws_eks_node_group.general, aws_eks_node_group.forge]
 }
 
+# kubectl port-forward svc/argocd-server -n argocd 8080:443
 resource "helm_release" "argocd" {
   name             = "argocd"
   repository       = "https://argoproj.github.io/argo-helm"
@@ -529,4 +530,31 @@ resource "helm_release" "keda" {
   }
 
   depends_on = [aws_eks_node_group.general, aws_eks_node_group.forge]
+}
+
+resource "helm_release" "prometheus" {
+  name             = "prometheus"
+  repository       = "https://prometheus-community.github.io/helm-charts"
+  chart            = "kube-prometheus-stack"
+  namespace        = "monitoring"
+  create_namespace = true
+
+  set {
+    name  = "prometheus.prometheusSpec.serviceMonitorSelectorNilUsesHelmValues"
+    value = "false"
+  }
+}
+
+# kubectl port-forward svc/grafana 3000:80 -n monitoring
+resource "helm_release" "grafana" {
+  name             = "grafana"
+  repository       = "https://grafana.github.io/helm-charts"
+  chart            = "grafana"
+  namespace        = "monitoring"
+  create_namespace = true
+
+  set {
+    name  = "adminPassword"
+    value = var.grafana_admin_password
+  }
 }
