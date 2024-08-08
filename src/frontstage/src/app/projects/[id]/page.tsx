@@ -28,6 +28,7 @@ import toast from "react-hot-toast";
 const ProjectDetailPage: React.FC = () => {
   const params = useParams();
   const [isPolling, setIsPolling] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
 
   const projectId = params.id as string;
   const {
@@ -40,13 +41,30 @@ const ProjectDetailPage: React.FC = () => {
   });
 
   const {
-    data: logs,
+    data: logSet,
     isLoading: isLogsLoading,
     error: logsError,
     refetch: refetchLogs,
   } = useFetchProjectLogs<any>(projectId, {
     refetchInterval: isPolling ? 5000 : false, // Poll every 5 seconds if isPolling is true
   });
+
+  useEffect(() => {
+    if (logSet.length) {
+      const uniqueLogs = logSet.filter((newLog: { log: string; }, index: number) => {
+        return !logs.some((existingLog, existingIndex) => {
+          try {
+            const parsedNewLog = JSON.parse(newLog.log);
+            const parsedExistingLog = JSON.parse(existingLog.log);
+            return parsedNewLog.stream === parsedExistingLog.stream && index === existingIndex;
+          } catch {
+            return newLog.log === existingLog.log && index === existingIndex;
+          }
+        });
+      });
+      setLogs((prevLogs) => prevLogs.concat(uniqueLogs));
+    }
+  }, [logSet, logs]);
 
   useEffect(() => {
     if (project?.status === "DEPLOYING") {
