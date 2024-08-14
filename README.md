@@ -6,15 +6,12 @@ Aether is a minimalist PaaS (Platform as a Service) offering, inspired by Vercel
 ![DEMO](docs/aether-demo.gif)
 
 ## Features ✨
-
-- Easy deployment from public Git repositories
-- Automatic builds and deployments
-- Real-time log streaming
-- Serverless architecture
-- Microservices-based design
-- Efficient inter-service communication using gRPC
-- Intelligent auto-scaling with HPA and KEDA
-- Comprehensive monitoring with Prometheus and Grafana
+- One-click deployments from Git repositories 🖱️
+- Automatic build and deployment pipeline 🔄
+- Real-time log streaming for easy debugging 📊
+- Scalable infrastructure that grows with your needs 📈
+- Comprehensive monitoring and analytics 🔍
+- Zero-configuration required for most projects ⚙️
 
 ## Tech Stack 🛠️
 
