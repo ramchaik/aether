@@ -558,3 +558,79 @@ resource "helm_release" "grafana" {
     value = var.grafana_admin_password
   }
 }
+
+resource "helm_release" "karpenter" {
+  name       = "karpenter"
+  repository = "https://charts.karpenter.sh"
+  chart      = "karpenter"
+  namespace  = "karpenter"
+  version    = "v0.29.0"
+
+  create_namespace = true
+
+  set {
+    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    value = "arn:aws:iam::502413910473:role/LabRole"
+  }
+
+  set {
+    name  = "settings.aws.clusterName"
+    value = aws_eks_cluster.main.name
+  }
+
+  set {
+    name  = "settings.aws.clusterEndpoint"
+    value = aws_eks_cluster.main.endpoint
+  }
+
+  set {
+    name  = "settings.aws.defaultInstanceProfile"
+    value = "KarpenterNodeInstanceProfile-${aws_eks_cluster.main.name}"
+  }
+
+  depends_on = [
+    aws_eks_node_group.general,
+    aws_eks_node_group.forge,
+  ]
+}
+
+resource "kubectl_manifest" "karpenter_provisioner" {
+  yaml_body = <<-YAML
+apiVersion: karpenter.sh/v1alpha5
+kind: Provisioner
+metadata:
+  name: default
+spec:
+  requirements:
+    - key: karpenter.sh/capacity-type
+      operator: In
+      values: ["spot"]
+  limits:
+    resources:
+      cpu: 1000
+  providerRef:
+    name: default
+  consolidation:
+    enabled: true
+YAML
+
+  depends_on = [helm_release.karpenter]
+}
+
+resource "kubectl_manifest" "karpenter_node_pool" {
+  yaml_body = <<-YAML
+apiVersion: karpenter.k8s.aws/v1alpha1
+kind: AWSNodeTemplate
+metadata:
+  name: default
+spec:
+  subnetSelector:
+    karpenter.sh/discovery: ${aws_eks_cluster.main.name}
+  securityGroupSelector:
+    karpenter.sh/discovery: ${aws_eks_cluster.main.name}
+  tags:
+    karpenter.sh/discovery: ${aws_eks_cluster.main.name}
+YAML
+
+  depends_on = [helm_release.karpenter]
+}
